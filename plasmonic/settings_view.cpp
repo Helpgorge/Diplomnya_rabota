@@ -8,6 +8,8 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QHBoxLayout>
+#include <QHostAddress>
+#include <QMessageBox>
 
 SettingsView::SettingsView(QWidget* parent)
     : QDialog(parent)
@@ -15,37 +17,39 @@ SettingsView::SettingsView(QWidget* parent)
     setWindowTitle("Настройки");
     resize(600, 400);
 
-    // Группа сетевых настроек
+    //Группа сетевых настроек
     QGroupBox* networkGroup = new QGroupBox("Сеть", this);
 
-    // Кнопки
+    //Кнопки
     QPushButton* cancelButton = new QPushButton("Отмена", this);
     QPushButton* saveButton = new QPushButton("Сохранить", this);
 
-    // Горизонтальное расположение кнопок
+    //Горизонтальное расположение кнопок
     QHBoxLayout* buttonLayout = new QHBoxLayout;
+    buttonLayout->addStretch();
     buttonLayout->addWidget(cancelButton);
     buttonLayout->addWidget(saveButton);
-    buttonLayout->addStretch();
+    
 
-    // IP-адрес
-    QLineEdit* ipEdit = new QLineEdit(networkGroup);
-    ipEdit->setMaximumWidth(120);
+    //IP-адрес
+    ipEdit = new QLineEdit(networkGroup);
+    ipEdit->setMaximumWidth(60);
     ipEdit->setText("127.0.0.1");
 
-    // Порт
-    QSpinBox* portEdit = new QSpinBox(networkGroup);
+    //Порт
+    portEdit = new QSpinBox(networkGroup);
+    portEdit->setMaximumWidth(60);
     portEdit->setRange(1, 65535);
     portEdit->setValue(5000);
 
-    // Параметры внутри рамки
+    //Параметры внутри рамки
     QFormLayout* networkLayout = new QFormLayout;
     networkLayout->addRow("IP-адрес:", ipEdit);
     networkLayout->addRow("Порт:", portEdit);
 
     networkGroup->setLayout(networkLayout);
 
-    // Основная компоновка окна
+    //Основная компоновка окна
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(networkGroup);
     mainLayout->addStretch();
@@ -57,6 +61,13 @@ SettingsView::SettingsView(QWidget* parent)
         this,
         &QDialog::reject
     );
+
+    connect(
+        saveButton,
+        &QPushButton::clicked,
+        this,
+        &SettingsView::onApplyClicked
+    );
     
 }
 
@@ -66,5 +77,24 @@ SettingsView::~SettingsView()
 
 void SettingsView::onApplyClicked()
 {
-
+    QHostAddress address;
+    if (address.setAddress(ipEdit->text()))
+    {
+        QMessageBox::information(
+            this,
+            "Настройки сохранены",
+            "IP-адрес: " + ipEdit->text() + "\nПорт: " + QString::number(portEdit->value())
+		);
+        //Добавить обращение к Presenter и сохранение в SQL
+		SettingsView::accept();
+    }
+    else
+    {
+        QMessageBox::critical(
+            this,
+            "Ошибка",
+            "Введён некорректный IP-адрес."
+        );
+        return;
+    }
 }

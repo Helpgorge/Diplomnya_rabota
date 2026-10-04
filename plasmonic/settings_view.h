@@ -2,6 +2,10 @@
 
 #include <QDialog>
 
+class QLineEdit;
+class QSpinBox;
+
+
 class SettingsView : public QDialog
 {
     Q_OBJECT
@@ -13,4 +17,7 @@ public:
 private slots:
     void onApplyClicked();
 
+private:
+    QLineEdit* ipEdit;
+    QSpinBox* portEdit;
 };

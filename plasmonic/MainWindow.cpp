@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget* parent)
         connectTcpAction,
         &QAction::triggered,
         this,
-        &MainWindow::onConnectClicked
+        &MainWindow::onConnectClickedTest
     );
 
     connect(
