@@ -80,11 +80,7 @@ void SettingsView::onApplyClicked()
     QHostAddress address;
     if (address.setAddress(ipEdit->text()))
     {
-        QMessageBox::information(
-            this,
-            "Настройки сохранены",
-            "IP-адрес: " + ipEdit->text() + "\nПорт: " + QString::number(portEdit->value())
-		);
+		qDebug() << "IP-адрес корректный:" << ipEdit->text();
         //Добавить обращение к Presenter и сохранение в SQL
 		SettingsView::accept();
     }

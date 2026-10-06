@@ -32,6 +32,12 @@
     <ClCompile Include="settings_view.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MainPresenter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TcpClientModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="MainWindow.h">
@@ -40,5 +46,13 @@
     <QtMoc Include="settings_view.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="TcpClientModel.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MainPresenter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

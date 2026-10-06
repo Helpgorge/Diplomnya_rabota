@@ -12,14 +12,20 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MainPresenter.cpp" />
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="settings_view.cpp" />
+    <ClCompile Include="TcpClientModel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="MainWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="settings_view.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MainPresenter.h" />
+    <QtMoc Include="TcpClientModel.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7B5364FA-A8AB-4496-8CD5-256DD9499642}</ProjectGuid>
@@ -94,7 +100,7 @@
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -108,7 +114,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>

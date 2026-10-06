@@ -1,8 +1,8 @@
 #include <QApplication>
 
 #include "MainWindow.h"
-// #include "MainPresenter.h"
-// #include "TcpClient.h"
+#include "MainPresenter.h"
+ #include "TcpClientModel.h"
 
 int main(int argc, char* argv[])
 {
@@ -15,6 +15,7 @@ int main(int argc, char* argv[])
     MainWindow window;
 
     // Presenter
+    MainPresenter presenter(&window);
     // MainPresenter presenter(&window, &tcpClient);
 
     window.show();

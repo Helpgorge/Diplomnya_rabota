@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QProgressDialog>
 
 class MainWindow : public QMainWindow
 {
@@ -10,11 +11,17 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
+    void showConnectionProgress();
+    void setConnectionStatus(const QString& text);
+    void closeConnectionProgress();
+
+signals:
+    void connectRequested();
+
 private slots:
     void onConnectClicked();
-    void onConnectClickedTest();
     void onSettingsClicked();
 
 private:
-
+    QProgressDialog* connectionDialog = nullptr;
 };

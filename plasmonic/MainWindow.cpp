@@ -5,7 +5,6 @@
 #include <QMenuBar>
 #include <QMenu>
 #include <QProgressDialog>
-#include <QTimer>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
@@ -33,7 +32,7 @@ MainWindow::MainWindow(QWidget* parent)
         connectTcpAction,
         &QAction::triggered,
         this,
-        &MainWindow::onConnectClickedTest
+        &MainWindow::onConnectClicked
     );
 
     connect(
@@ -49,43 +48,43 @@ MainWindow::~MainWindow()
 {
 }
 
-void MainWindow::onConnectClickedTest()
+void MainWindow::showConnectionProgress()
 {
-    QProgressDialog* dialog = new QProgressDialog(this);
+    connectionDialog = new QProgressDialog(this);
 
-    dialog->setWindowTitle("Подключение");
-    dialog->setLabelText("Установка соединения по TCP...");
-    dialog->setRange(0, 0);
-    dialog->setCancelButton(nullptr);
-    dialog->setMinimumDuration(0);
-    dialog->setAutoClose(false);
+    connectionDialog->setWindowTitle("Подключение");
+    connectionDialog->setLabelText("Установка соединения по TCP...");
+    connectionDialog->setRange(0, 0);
+    connectionDialog->setCancelButton(nullptr);
+    connectionDialog->setMinimumDuration(0);
+    connectionDialog->setAutoClose(false);
 
-    dialog->show();
+    qDebug() << "Connection progress dialog show.";
 
-    // Через 1 секунду
-    QTimer::singleShot(1000, dialog, [dialog]()
-        {
-            dialog->setLabelText("Установлено соединение с сервером.");
-        });
+    connectionDialog->show();
+}
 
-    // Через 2 секунды
-    QTimer::singleShot(2000, dialog, [dialog]()
-        {
-            dialog->setLabelText("Отправка данных...");
-        });
+void MainWindow::setConnectionStatus(const QString& text)
+{
+    qDebug() << "Set tatus:" << text;
+    if (connectionDialog)
+        connectionDialog->setLabelText(text);
+}
 
-    // Через 3 секунды
-    QTimer::singleShot(3000, dialog, [dialog]()
-        {
-            dialog->setLabelText("Подключено.");
-        });
+void MainWindow::closeConnectionProgress()
+{
+    if (!connectionDialog)
+        return;
 
-    // Через 4 секунды закрываем окно
-    QTimer::singleShot(4000, dialog, [dialog]()
-        {
-            dialog->close();
-            dialog->deleteLater();
-        });
+    connectionDialog->close();
+    connectionDialog->deleteLater();
+    connectionDialog = nullptr;
+	qDebug() << "Connection progress dialog closed.";
+}
+
+void MainWindow::onConnectClicked()
+{
+    emit connectRequested();
 }
 
 void MainWindow::onSettingsClicked()
@@ -93,5 +92,3 @@ void MainWindow::onSettingsClicked()
     SettingsView settings(this);
     settings.exec();
 }
-
-void MainWindow::onConnectClicked(){}
