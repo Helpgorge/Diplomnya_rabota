@@ -11,8 +11,7 @@
 #include <QHostAddress>
 #include <QMessageBox>
 
-SettingsView::SettingsView(QWidget* parent)
-    : QDialog(parent)
+SettingsView::SettingsView(QWidget* parent): QDialog(parent)
 {
     setWindowTitle("Настройки");
     resize(600, 400);
@@ -80,7 +79,7 @@ void SettingsView::onApplyClicked()
     QHostAddress address;
     if (address.setAddress(ipEdit->text()))
     {
-		qDebug() << "IP-адрес корректный:" << ipEdit->text();
+		qDebug() << "Valid IP address:" << ipEdit->text();
         //Добавить обращение к Presenter и сохранение в SQL
 		SettingsView::accept();
     }

@@ -1,22 +1,22 @@
-#include <QApplication>
+﻿#include <QApplication>
 
 #include "MainWindow.h"
 #include "MainPresenter.h"
- #include "TcpClientModel.h"
+#include "TcpClientModel.h"
+
 
 int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
 
     // Model
-    // TcpClient tcpClient;
+    TcpClientModel tcpClient;
 
     // View
     MainWindow window;
 
     // Presenter
-    MainPresenter presenter(&window);
-    // MainPresenter presenter(&window, &tcpClient);
+    MainPresenter presenter(&window, &tcpClient);
 
     window.show();
 

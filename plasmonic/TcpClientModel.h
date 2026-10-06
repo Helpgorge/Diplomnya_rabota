@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QObject>
 #include <QTcpSocket>
@@ -13,15 +13,12 @@ public:
 
     void connectToServer(const QString& host, quint16 port);
     void disconnectFromServer();
-
     bool isConnected() const;
 
 signals:
     void connected();
-    void disconnected();
-
+    void disconnected(bool requestedByUser);
     void dataReceived(const QByteArray& data);
-
     void errorOccurred(const QString& error);
 
 private slots:
@@ -32,4 +29,5 @@ private slots:
 
 private:
     QTcpSocket* socket;
+    bool disconnectRequested = false;
 };

@@ -1,16 +1,49 @@
 ﻿#include "MainPresenter.h"
 #include "MainWindow.h"
+#include "TcpClientModel.h"
 
-MainPresenter::MainPresenter(MainWindow* view)
-    : view(view)
+#include <QThread>
+
+
+MainPresenter::MainPresenter(MainWindow* view, TcpClientModel* tcpClient): view(view), tcpClient(tcpClient)
 {
-    QObject::connect(
-        view,
-        &MainWindow::connectRequested,
-        view,
-        [this]()
+    QObject::connect(view, &MainWindow::connectRequested, view, [this]()
         {
             onConnectRequested();
+        }
+    );
+
+    QObject::connect(view, &MainWindow::disconnectRequested, view, [this]()
+        {
+            onDisconnectRequested();
+        }
+    );
+
+    QObject::connect(tcpClient, &TcpClientModel::connected, view, [this]()
+        {
+            this->view->setConnectionStatus("Connected to server.");
+            QThread::msleep(700);
+            this->view->closeConnectionProgress();
+            this->view->setConnected(true, false);
+        }
+    );
+
+    QObject::connect(tcpClient, &TcpClientModel::errorOccurred, view, [this](const QString& error)
+        {
+            this->view->setConnectionStatus("Connection failed: " + error);
+            this->view->closeConnectionProgress();
+            this->view->setConnected(false, false);
+        }
+    );
+
+    QObject::connect(tcpClient, &TcpClientModel::disconnected, view, [this](bool requestedByUser)
+        {
+            qDebug() << "Disconnected from server.";
+            if (!requestedByUser)
+            {
+                this->view->showConnectionLost();
+            }
+            this->view->setConnected(false, false);
         }
     );
 }
@@ -21,16 +54,14 @@ MainPresenter::~MainPresenter()
 
 void MainPresenter::onConnectRequested()
 {
-    bool connected = true;
+    view->setConnected(true, true);
     view->showConnectionProgress();
+    view->setConnectionStatus("Establishing TCP connection...");
+    tcpClient->connectToServer("127.0.0.1", 5000);
+}
 
-    view->setConnectionStatus(
-        "Установлено соединение с сервером."
-    );
-
-    view->setConnectionStatus(
-        "Отправка данных..."
-    );
-
-	view->closeConnectionProgress();
+void MainPresenter::onDisconnectRequested()
+{
+    view->setConnected(false, true);
+    tcpClient->disconnectFromServer();
 }

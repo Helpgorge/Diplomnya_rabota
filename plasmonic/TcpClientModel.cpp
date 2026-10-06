@@ -1,37 +1,13 @@
-#include "TcpClientModel.h"
+﻿#include "TcpClientModel.h"
 
-TcpClientModel::TcpClientModel(QObject* parent)
-    : QObject(parent)
+TcpClientModel::TcpClientModel(QObject* parent): QObject(parent)
 {
     socket = new QTcpSocket(this);
 
-    connect(
-        socket,
-        &QTcpSocket::connected,
-        this,
-        &TcpClientModel::onConnected
-    );
-
-    connect(
-        socket,
-        &QTcpSocket::disconnected,
-        this,
-        &TcpClientModel::onDisconnected
-    );
-
-    connect(
-        socket,
-        &QTcpSocket::readyRead,
-        this,
-        &TcpClientModel::onReadyRead
-    );
-
-    connect(
-        socket,
-        &QTcpSocket::errorOccurred,
-        this,
-        &TcpClientModel::onErrorOccurred
-    );
+    connect(socket, &QTcpSocket::connected, this, &TcpClientModel::onConnected);
+    connect(socket, &QTcpSocket::disconnected, this, &TcpClientModel::onDisconnected);
+    connect(socket, &QTcpSocket::readyRead, this, &TcpClientModel::onReadyRead);
+    connect(socket, &QTcpSocket::errorOccurred, this, &TcpClientModel::onErrorOccurred);
 }
 
 TcpClientModel::~TcpClientModel()
@@ -40,11 +16,13 @@ TcpClientModel::~TcpClientModel()
 
 void TcpClientModel::connectToServer(const QString& host, quint16 port)
 {
+    disconnectRequested = false;
     socket->connectToHost(host, port);
 }
 
 void TcpClientModel::disconnectFromServer()
 {
+    disconnectRequested = true;
     socket->disconnectFromHost();
 }
 
@@ -60,7 +38,8 @@ void TcpClientModel::onConnected()
 
 void TcpClientModel::onDisconnected()
 {
-    emit disconnected();
+    emit disconnected(disconnectRequested);
+    disconnectRequested = false;
 }
 
 void TcpClientModel::onReadyRead()
