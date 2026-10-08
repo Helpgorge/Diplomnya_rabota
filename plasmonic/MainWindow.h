@@ -24,7 +24,6 @@ signals:
 private slots:
     void onConnectClicked();
     void onDisconnectClicked();
-    void onSettingsClicked();
 
 private:
     QProgressDialog* connectionDialog = nullptr;

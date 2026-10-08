@@ -14,14 +14,10 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainPresenter.cpp" />
     <ClCompile Include="MainWindow.cpp" />
-    <ClCompile Include="settings_view.cpp" />
     <ClCompile Include="TcpClientModel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="MainWindow.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <QtMoc Include="settings_view.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MainPresenter.h" />
@@ -70,12 +66,12 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(QtMsBuild)\Qt.props" />
-    <Import Project="..\..\test\rpi_test_connection\rpi_test_connection\OpenCV500_Debug.props" />
+    <Import Project="OpenCV500_Debug.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(QtMsBuild)\Qt.props" />
-    <Import Project="..\..\test\rpi_test_connection\rpi_test_connection\OpenCV500_Release.props" />
+    <Import Project="OpenCV500_Release.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">

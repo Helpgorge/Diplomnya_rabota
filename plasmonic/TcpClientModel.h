@@ -11,7 +11,7 @@ public:
     explicit TcpClientModel(QObject* parent = nullptr);
     ~TcpClientModel();
 
-    void connectToServer(const QString& host, quint16 port);
+    void connectToServer();
     void disconnectFromServer();
     bool isConnected() const;
 
@@ -30,4 +30,6 @@ private slots:
 private:
     QTcpSocket* socket;
     bool disconnectRequested = false;
+    static constexpr const char* ServerIp = "192.168.50.1";
+    static constexpr quint16 ServerPort = 5000;
 };

@@ -1,5 +1,4 @@
 ﻿#include "MainWindow.h"
-#include "settings_view.h"
 
 #include <QWidget>
 #include <QMenuBar>
@@ -21,8 +20,6 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
     QMenu* networkMenu = menuBar()->addMenu("Сеть");
     QMenu* recordingMenu = menuBar()->addMenu("Запись");
     QMenu* processingMenu = menuBar()->addMenu("Обработка");
-    menuBar()->addSeparator();
-    QAction* opensettingsActions = menuBar()->addAction("Настройки");
     
     connectTcpAction = networkMenu->addAction("Установить соединение");
     disconnectTcpAction = networkMenu->addAction("Разорвать соединение");
@@ -31,7 +28,6 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
 
     connect(connectTcpAction, &QAction::triggered, this, &MainWindow::onConnectClicked);
     connect(disconnectTcpAction, &QAction::triggered, this, &MainWindow::onDisconnectClicked);
-    connect(opensettingsActions, &QAction::triggered, this, &MainWindow::onSettingsClicked);
 
 }
 
@@ -104,10 +100,4 @@ void MainWindow::showConnectionLost()
         "Соединение",
         "Соединение с сервером было разорвано."
     );
-}
-
-void MainWindow::onSettingsClicked()
-{
-    SettingsView settings(this);
-    settings.exec();
 }

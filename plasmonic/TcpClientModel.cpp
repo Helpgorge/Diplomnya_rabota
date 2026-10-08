@@ -14,10 +14,10 @@ TcpClientModel::~TcpClientModel()
 {
 }
 
-void TcpClientModel::connectToServer(const QString& host, quint16 port)
+void TcpClientModel::connectToServer()
 {
     disconnectRequested = false;
-    socket->connectToHost(host, port);
+    socket->connectToHost(ServerIp, ServerPort);
 }
 
 void TcpClientModel::disconnectFromServer()

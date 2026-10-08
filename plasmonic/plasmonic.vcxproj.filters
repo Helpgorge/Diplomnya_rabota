@@ -29,9 +29,6 @@
     <ClCompile Include="MainWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="settings_view.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MainPresenter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -41,9 +38,6 @@
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="MainWindow.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="settings_view.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="TcpClientModel.h">

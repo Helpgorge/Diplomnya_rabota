@@ -5,19 +5,18 @@
 #include <QThread>
 
 
-MainPresenter::MainPresenter(MainWindow* view, TcpClientModel* tcpClient): view(view), tcpClient(tcpClient)
+MainPresenter::MainPresenter(MainWindow* view, TcpClientModel* tcpClient)
+    : view(view), tcpClient(tcpClient)
 {
     QObject::connect(view, &MainWindow::connectRequested, view, [this]()
         {
             onConnectRequested();
-        }
-    );
+        });
 
     QObject::connect(view, &MainWindow::disconnectRequested, view, [this]()
         {
             onDisconnectRequested();
-        }
-    );
+        });
 
     QObject::connect(tcpClient, &TcpClientModel::connected, view, [this]()
         {
@@ -25,16 +24,14 @@ MainPresenter::MainPresenter(MainWindow* view, TcpClientModel* tcpClient): view(
             QThread::msleep(700);
             this->view->closeConnectionProgress();
             this->view->setConnected(true, false);
-        }
-    );
+        });
 
     QObject::connect(tcpClient, &TcpClientModel::errorOccurred, view, [this](const QString& error)
         {
             this->view->setConnectionStatus("Connection failed: " + error);
             this->view->closeConnectionProgress();
             this->view->setConnected(false, false);
-        }
-    );
+        });
 
     QObject::connect(tcpClient, &TcpClientModel::disconnected, view, [this](bool requestedByUser)
         {
@@ -44,8 +41,7 @@ MainPresenter::MainPresenter(MainWindow* view, TcpClientModel* tcpClient): view(
                 this->view->showConnectionLost();
             }
             this->view->setConnected(false, false);
-        }
-    );
+        });
 }
 
 MainPresenter::~MainPresenter()
@@ -56,8 +52,8 @@ void MainPresenter::onConnectRequested()
 {
     view->setConnected(true, true);
     view->showConnectionProgress();
-    view->setConnectionStatus("Establishing TCP connection...");
-    tcpClient->connectToServer("127.0.0.1", 5000);
+    this->view->setConnectionStatus("Establishing TCP connection...");
+    this->tcpClient->connectToServer();
 }
 
 void MainPresenter::onDisconnectRequested()
