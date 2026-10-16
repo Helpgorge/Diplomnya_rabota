@@ -10,10 +10,6 @@ TcpClientModel::TcpClientModel(QObject* parent): QObject(parent)
     connect(socket, &QTcpSocket::errorOccurred, this, &TcpClientModel::onErrorOccurred);
 }
 
-TcpClientModel::~TcpClientModel()
-{
-}
-
 void TcpClientModel::connectToServer()
 {
     disconnectRequested = false;
@@ -54,4 +50,43 @@ void TcpClientModel::onErrorOccurred(QAbstractSocket::SocketError error)
     Q_UNUSED(error);
 
     emit errorOccurred(socket->errorString());
+}
+
+void TcpClientModel::startStream()
+{
+    const char command = static_cast<char>(Command::StartStream);
+    socket->write(&command, 1);
+}
+
+void TcpClientModel::stopStream()
+{
+    const char command = static_cast<char>(Command::StopStream);
+    socket->write(&command, 1);
+}
+
+void TcpClientModel::setExposure(quint32 exposure)
+{
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+
+    stream.setByteOrder(QDataStream::BigEndian);
+
+    stream << static_cast<quint8>(Command::SetExposure);
+    stream << exposure;
+
+    socket->write(data);
+}
+
+void TcpClientModel::setGain(float gain)
+{
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+
+    stream.setByteOrder(QDataStream::BigEndian);
+    stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+    stream << static_cast<quint8>(Command::SetGain);
+    stream << gain;
+
+    socket->write(data);
 }

@@ -1,0 +1,36 @@
+
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "vkr",
+            "displayName": "Visual Studio 2022 - x64",
+            "description": "MSVC 2022 x64, Qt 6.12.0, OpenCV",
+            "generator": "Visual Studio 17 2022",
+            "toolset": "host=x64",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_C_COMPILER": "cl.exe",
+                "CMAKE_CXX_COMPILER": "cl.exe",
+                "CMAKE_PREFIX_PATH": "C:/libraries/Qt/6.12.0/msvc2022_64",
+                "OpenCV_DIR": "C:/libraries/opencv/build"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "vkr-debug",
+            "displayName": "Visual Studio 2022 - x64 - Debug",
+            "configurePreset": "vkr",
+            "configuration": "Debug"
+        },
+        {
+            "name": "vkr-release",
+            "displayName": "Visual Studio 2022 - x64 - Release",
+            "configurePreset": "vkr",
+            "configuration": "Release"
+        }
+    ]
+}

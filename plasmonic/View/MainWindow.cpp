@@ -31,10 +31,6 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
 
 }
 
-MainWindow::~MainWindow()
-{
-}
-
 void MainWindow::showConnectionProgress()
 {
     connectionDialog = new QProgressDialog(this);
@@ -60,8 +56,7 @@ void MainWindow::setConnectionStatus(const QString& text)
 
 void MainWindow::closeConnectionProgress()
 {
-    if (!connectionDialog)
-        return;
+    if (!connectionDialog) return;
 
     connectionDialog->close();
     connectionDialog->deleteLater();
