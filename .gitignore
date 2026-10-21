@@ -416,3 +416,5 @@ build/CMakeFiles/4.4.4/CompilerIdCXX/CMakeCXXCompilerId.cpp
 build/CMakeFiles/4.4.4/CompilerIdCXX/CompilerIdCXX.exe
 build/CMakeFiles/4.4.4/CompilerIdCXX/CompilerIdCXX.vcxproj
 build/CMakeFiles/b3afcf8897160c2e23f70967508db84a/generate.stamp.rule
+.clang-format
+.gitignore

@@ -1,64 +1,209 @@
 ﻿#include "MainPresenter.h"
 #include "MainWindow.h"
-#include "TcpClientModel.h"
+#include "CameraControlModel.h"
+#include "VideoStreamModel.h"
 
-#include <QThread>
+#include <QDebug>
 
-
-MainPresenter::MainPresenter(MainWindow* view, TcpClientModel* tcpClient): view(view), tcpClient(tcpClient) 
+MainPresenter::MainPresenter(MainWindow* view, CameraControlModel* сameraControlModel,
+                             VideoStreamModel* videoStreamModel)
+    : view(view), сameraControlModel(сameraControlModel), videoStreamModel(videoStreamModel)
 {
-    QObject::connect(tcpClient, &TcpClientModel::connected, this, &MainPresenter::onConnected);
-    QObject::connect(tcpClient, &TcpClientModel::disconnected, this, &MainPresenter::onDisconnected);
-    QObject::connect(tcpClient, &TcpClientModel::errorOccurred, this, &MainPresenter::onErrorOccurred);
-    
+    // Сигналы управляющего TCP-соединения.
+    QObject::connect(сameraControlModel, &CameraControlModel::connected, this, &MainPresenter::onConnected);
+    QObject::connect(сameraControlModel, &CameraControlModel::disconnected, this, &MainPresenter::onDisconnected);
+    QObject::connect(сameraControlModel, &CameraControlModel::errorOccurred, this, &MainPresenter::onErrorOccurred);
+
+    // Запросы подключения и отключения.
     QObject::connect(view, &MainWindow::connectRequested, this, &MainPresenter::onConnectRequested);
     QObject::connect(view, &MainWindow::disconnectRequested, this, &MainPresenter::onDisconnectRequested);
+
+    // Сигналы GStreamer.
+    QObject::connect(videoStreamModel, &VideoStreamModel::frameReceived, this, &MainPresenter::onFrameReceived);
+    QObject::connect(videoStreamModel, &VideoStreamModel::streamError, this, &MainPresenter::onStreamError);
+    QObject::connect(videoStreamModel, &VideoStreamModel::streamStopped, this, &MainPresenter::onStreamStopped);
+
+    // Запросы отображения окон.
+    QObject::connect(view, &MainWindow::showVideoRequested, this, &MainPresenter::onShowVideoRequested);
+    QObject::connect(view, &MainWindow::showSubtractionRequested, this, &MainPresenter::onShowSubtractionRequested);
 }
 
 void MainPresenter::onConnected()
 {
-    view->setConnectionStatus("Connected to server.");
-    QThread::msleep(700);
-    view->closeConnectionProgress();
-    view->setConnected(true, false);
-    testSendingCommand();
+    if (disconnecting || !connecting)
+    {
+        return;
+    }
+
+    tcpConnected = true;
+
+    qInfo() << "TCP: соединение установлено, порт 5000";
+
+    view->setConnectionStatus("Connecting GStreamer...");
+
+    // Запускаем приём RAW после установления TCP-соединения.
+    videoStreamModel->startReceiving();
 }
 
 void MainPresenter::onDisconnected(bool requestedByUser)
 {
-    qDebug() << "Disconnected from server.";
-    if (!requestedByUser)
+    qInfo() << "TCP: соединение разорвано";
+
+    tcpConnected = false;
+
+    if (disconnecting)
+    {
+        return;
+    }
+
+    const bool connectionLost = !requestedByUser && !connecting;
+
+    disconnectAll();
+
+    if (connectionLost)
     {
         view->showConnectionLost();
     }
-    view->setConnected(false, false);
 }
 
 void MainPresenter::onErrorOccurred(const QString& error)
 {
+    if (disconnecting)
+    {
+        return;
+    }
+
+    qWarning() << "TCP:" << error;
+
     view->setConnectionStatus("Connection failed: " + error);
-    view->closeConnectionProgress();
-    view->setConnected(false, false);
+
+    disconnectAll();
 }
 
 void MainPresenter::onConnectRequested()
 {
+    if (connecting || tcpConnected || disconnecting)
+    {
+        return;
+    }
+
+    connecting = true;
+    streamReady = false;
+
+    qInfo() << "Подключение к Raspberry Pi";
+
     view->setConnected(true, true);
     view->showConnectionProgress();
     view->setConnectionStatus("Establishing TCP connection...");
-    tcpClient->connectToServer();
+
+    // Подключаем управляющий канал (5000).
+    сameraControlModel->connectToServer();
 }
 
 void MainPresenter::onDisconnectRequested()
 {
-    view->setConnected(false, true);
-    tcpClient->disconnectFromServer();
+    qInfo() << "Отключение от Raspberry Pi";
+
+    disconnectAll();
 }
 
-void MainPresenter::testSendingCommand()
+void MainPresenter::onFrameReceived(const QByteArray& frame)
 {
-    tcpClient->startStream();
-    tcpClient->setExposure(100);
-    tcpClient->setGain(1.5);
-    tcpClient->stopStream();
+    if (disconnecting || !connecting || !tcpConnected || streamReady || frame.isEmpty())
+    {
+        return;
+    }
+
+    streamReady = true;
+    connecting = false;
+
+    qInfo() << "GStreamer: первый RAW-кадр получен, размер:" << frame.size() << "байт";
+
+    view->setConnectionStatus("Connected to server.");
+    view->closeConnectionProgress();
+    view->setConnected(true, false);
+}
+
+void MainPresenter::onStreamError(const QString& error)
+{
+    if (disconnecting || (!connecting && !tcpConnected))
+    {
+        return;
+    }
+
+    qWarning() << "GStreamer:" << error;
+
+    const bool connectionLost = streamReady;
+
+    view->setConnectionStatus("GStreamer error: " + error);
+
+    disconnectAll();
+
+    if (connectionLost)
+    {
+        view->showConnectionLost();
+    }
+}
+
+void MainPresenter::onStreamStopped()
+{
+    qInfo() << "GStreamer: приём видеопотока завершён";
+
+    if (disconnecting || (!connecting && !tcpConnected))
+    {
+        return;
+    }
+
+    const bool connectionLost = streamReady;
+
+    qWarning() << "GStreamer: неожиданная остановка видеопотока";
+
+    disconnectAll();
+
+    if (connectionLost)
+    {
+        view->showConnectionLost();
+    }
+}
+
+void MainPresenter::disconnectAll()
+{
+    if (disconnecting)
+    {
+        return;
+    }
+
+    disconnecting = true;
+
+    qInfo() << "Отключение TCP и GStreamer";
+
+    // Сначала запрещаем обработку событий текущего подключения.
+    connecting = false;
+    tcpConnected = false;
+    streamReady = false;
+
+    // Останавливаем видеопоток (5001).
+    videoStreamModel->stopReceiving();
+
+    // Отключаем управляющий канал (5000).
+    сameraControlModel->disconnectFromServer();
+
+    view->closeConnectionProgress();
+    view->setConnected(false, false);
+
+    disconnecting = false;
+}
+
+void MainPresenter::onShowVideoRequested()
+{
+    view->showVideoWindow();
+
+    qDebug() << "Запрошено окно исходного видеопотока";
+}
+
+void MainPresenter::onShowSubtractionRequested()
+{
+    view->showSubtractionWindow();
+
+    qDebug() << "Запрошено окно вычитания опорного кадра";
 }

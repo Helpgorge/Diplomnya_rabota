@@ -3,12 +3,12 @@
 #include <QObject>
 #include <QTcpSocket>
 
-class TcpClientModel : public QObject
+class CameraControlModel : public QObject
 {
     Q_OBJECT
 
-public:
-    explicit TcpClientModel(QObject* parent = nullptr);
+  public:
+    explicit CameraControlModel(QObject* parent = nullptr);
 
     // Управление подлючением по TCP
     void connectToServer();
@@ -21,25 +21,25 @@ public:
     void setExposure(quint32 exposure);
     void setGain(float gain);
 
-signals:
+  signals:
     void connected();
     void disconnected(bool requestedByUser);
     void dataReceived(const QByteArray& data);
     void errorOccurred(const QString& error);
 
-private slots:
+  private slots:
     void onConnected();
     void onDisconnected();
     void onReadyRead();
     void onErrorOccurred(QAbstractSocket::SocketError error);
 
-private:
+  private:
     enum class Command : quint8
     {
-        StartStream  = 0x01,
-        StopStream   = 0x02,
-        SetExposure  = 0x03,
-        SetGain      = 0x04
+        StartStream = 0x01,
+        StopStream = 0x02,
+        SetExposure = 0x03,
+        SetGain = 0x04
     };
 
     QTcpSocket* socket;

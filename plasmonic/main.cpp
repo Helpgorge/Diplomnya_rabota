@@ -2,23 +2,36 @@
 
 #include "MainWindow.h"
 #include "MainPresenter.h"
-#include "TcpClientModel.h"
-
+#include "CameraControlModel.h"
+#include "VideoStreamModel.h"
+#include "Logger.h"
 
 int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
 
-    // Model
-    TcpClientModel tcpClient;
+    // Логи
+    Logger::initialize();
 
-    // View
-    MainWindow window;
+    int result = 0;
 
-    // Presenter
-    MainPresenter presenter(&window, &tcpClient);
+    {
+        // Model
+        CameraControlModel сameraControlModel;
+        VideoStreamModel videoStreamModel;
 
-    window.show();
+        // View
+        MainWindow window;
 
-    return app.exec();
+        // Presenter
+        MainPresenter mainPresenter(&window, &сameraControlModel, &videoStreamModel);
+
+        window.show();
+
+        result = app.exec();
+    }
+
+    Logger::shutdown();
+
+    return result;
 }

@@ -1,70 +1,70 @@
-﻿#include "TcpClientModel.h"
+﻿#include "CameraControlModel.h"
 
-TcpClientModel::TcpClientModel(QObject* parent): QObject(parent)
+CameraControlModel::CameraControlModel(QObject* parent) : QObject(parent)
 {
     socket = new QTcpSocket(this);
 
-    connect(socket, &QTcpSocket::connected, this, &TcpClientModel::onConnected);
-    connect(socket, &QTcpSocket::disconnected, this, &TcpClientModel::onDisconnected);
-    connect(socket, &QTcpSocket::readyRead, this, &TcpClientModel::onReadyRead);
-    connect(socket, &QTcpSocket::errorOccurred, this, &TcpClientModel::onErrorOccurred);
+    connect(socket, &QTcpSocket::connected, this, &CameraControlModel::onConnected);
+    connect(socket, &QTcpSocket::disconnected, this, &CameraControlModel::onDisconnected);
+    connect(socket, &QTcpSocket::readyRead, this, &CameraControlModel::onReadyRead);
+    connect(socket, &QTcpSocket::errorOccurred, this, &CameraControlModel::onErrorOccurred);
 }
 
-void TcpClientModel::connectToServer()
+void CameraControlModel::connectToServer()
 {
     disconnectRequested = false;
     socket->connectToHost(ServerIp, ServerPort);
 }
 
-void TcpClientModel::disconnectFromServer()
+void CameraControlModel::disconnectFromServer()
 {
     disconnectRequested = true;
     socket->disconnectFromHost();
 }
 
-bool TcpClientModel::isConnected() const
+bool CameraControlModel::isConnected() const
 {
     return socket->state() == QAbstractSocket::ConnectedState;
 }
 
-void TcpClientModel::onConnected()
+void CameraControlModel::onConnected()
 {
     emit connected();
 }
 
-void TcpClientModel::onDisconnected()
+void CameraControlModel::onDisconnected()
 {
     emit disconnected(disconnectRequested);
     disconnectRequested = false;
 }
 
-void TcpClientModel::onReadyRead()
+void CameraControlModel::onReadyRead()
 {
     QByteArray data = socket->readAll();
 
     emit dataReceived(data);
 }
 
-void TcpClientModel::onErrorOccurred(QAbstractSocket::SocketError error)
+void CameraControlModel::onErrorOccurred(QAbstractSocket::SocketError error)
 {
     Q_UNUSED(error);
 
     emit errorOccurred(socket->errorString());
 }
 
-void TcpClientModel::startStream()
+void CameraControlModel::startStream()
 {
     const char command = static_cast<char>(Command::StartStream);
     socket->write(&command, 1);
 }
 
-void TcpClientModel::stopStream()
+void CameraControlModel::stopStream()
 {
     const char command = static_cast<char>(Command::StopStream);
     socket->write(&command, 1);
 }
 
-void TcpClientModel::setExposure(quint32 exposure)
+void CameraControlModel::setExposure(quint32 exposure)
 {
     QByteArray data;
     QDataStream stream(&data, QIODevice::WriteOnly);
@@ -77,7 +77,7 @@ void TcpClientModel::setExposure(quint32 exposure)
     socket->write(data);
 }
 
-void TcpClientModel::setGain(float gain)
+void CameraControlModel::setGain(float gain)
 {
     QByteArray data;
     QDataStream stream(&data, QIODevice::WriteOnly);

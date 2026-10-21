@@ -3,29 +3,43 @@
 #include <QMainWindow>
 #include <QProgressDialog>
 
+class VideoWindow;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
-public:
+  public:
     explicit MainWindow(QWidget* parent = nullptr);
 
-    void showConnectionProgress();
     void setConnectionStatus(const QString& text);
-    void closeConnectionProgress();
     void setConnected(bool connected, bool inProgress);
-    void showConnectionLost();
 
-signals:
+    void showConnectionProgress();
+    void showConnectionLost();
+    void showVideoWindow();
+    void showSubtractionWindow();
+
+    void closeConnectionProgress();
+
+  signals:
     void connectRequested();
     void disconnectRequested();
 
-private slots:
+    void showVideoRequested();
+    void showSubtractionRequested();
+
+  private slots:
     void onConnectClicked();
     void onDisconnectClicked();
 
-private:
-    QProgressDialog* connectionDialog = nullptr;
+  private:
     QAction* connectTcpAction = nullptr;
     QAction* disconnectTcpAction = nullptr;
+    QAction* showVideoAction = nullptr;
+    QAction* showSubtractionAction = nullptr;
+
+    QProgressDialog* connectionDialog = nullptr;
+    VideoWindow* videoWindow = nullptr;
+    VideoWindow* subtractionWindow = nullptr;
 };
