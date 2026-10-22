@@ -2,9 +2,10 @@
 
 #include <QObject>
 #include <QByteArray>
+#include <QString>
 
-#include <thread>
 #include <atomic>
+#include <thread>
 
 #include <gst/gst.h>
 
@@ -14,38 +15,32 @@ class VideoStreamModel : public QObject
 
   public:
     explicit VideoStreamModel(QObject* parent = nullptr);
-    ~VideoStreamModel() override = default;
+    ~VideoStreamModel() override;
 
-    // Управление
     void startReceiving();
     void stopReceiving();
 
+    // Тест
+    void updateStatistics(const QByteArray& frame);
+
   signals:
     void frameReceived(const QByteArray& frame);
-    void streamError(const QString& message);
+    void streamError(const QString& error);
     void streamStopped();
 
   private:
-    std::thread receivingThread;
-    std::atomic_bool receiving{false};
+    void receivingLoop();
+    void processBusMessages(GstBus* bus);
 
     GstElement* pipeline = nullptr;
 
-    // Параметры GStream
+    std::thread receivingThread;
+    std::atomic_bool receiving{false};
+
     static constexpr const char* STREAM_HOST = "192.168.50.1";
     static constexpr int STREAM_PORT = 5001;
-    static constexpr const char* APP_SINK_NAME = "framesink";
-    static constexpr int MAX_BUFFERS = 1;
+    static constexpr const char* APP_SINK_NAME = "rawsink";
+
+    static constexpr int MAX_BUFFERS = 4;
     static constexpr int SAMPLE_TIMEOUT_MS = 100;
-
-    // Параметры кадров
-    static constexpr int MAX_FRAME_WIDTH = 1920;
-    static constexpr int MAX_FRAME_HEIGHT = 1080;
-    static constexpr const char* RAW_CAPS_NAME = "application/x-raw10-frame";
-    static constexpr const char* RAW_FORMAT = "SBGGR10_CSI2P";
-
-    static constexpr int BUS_TIMEOUT_MS = 0;
-
-    void receivingLoop();
-    void processBusMessages();
 };

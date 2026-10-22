@@ -16,8 +16,6 @@ class CameraControlModel : public QObject
     bool isConnected() const;
 
     // Управляющие камерой, команды
-    void startStream();
-    void stopStream();
     void setExposure(quint32 exposure);
     void setGain(float gain);
 
@@ -36,10 +34,8 @@ class CameraControlModel : public QObject
   private:
     enum class Command : quint8
     {
-        StartStream = 0x01,
-        StopStream = 0x02,
-        SetExposure = 0x03,
-        SetGain = 0x04
+        SetExposure = 0x01,
+        SetGain = 0x02
     };
 
     QTcpSocket* socket;

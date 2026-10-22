@@ -28,64 +28,11 @@ MainPresenter::MainPresenter(MainWindow* view, CameraControlModel* сameraContro
     QObject::connect(view, &MainWindow::showSubtractionRequested, this, &MainPresenter::onShowSubtractionRequested);
 }
 
-void MainPresenter::onConnected()
-{
-    if (disconnecting || !connecting)
-    {
-        return;
-    }
-
-    tcpConnected = true;
-
-    qInfo() << "TCP: соединение установлено, порт 5000";
-
-    view->setConnectionStatus("Connecting GStreamer...");
-
-    // Запускаем приём RAW после установления TCP-соединения.
-    videoStreamModel->startReceiving();
-}
-
-void MainPresenter::onDisconnected(bool requestedByUser)
-{
-    qInfo() << "TCP: соединение разорвано";
-
-    tcpConnected = false;
-
-    if (disconnecting)
-    {
-        return;
-    }
-
-    const bool connectionLost = !requestedByUser && !connecting;
-
-    disconnectAll();
-
-    if (connectionLost)
-    {
-        view->showConnectionLost();
-    }
-}
-
-void MainPresenter::onErrorOccurred(const QString& error)
-{
-    if (disconnecting)
-    {
-        return;
-    }
-
-    qWarning() << "TCP:" << error;
-
-    view->setConnectionStatus("Connection failed: " + error);
-
-    disconnectAll();
-}
+// Реакции на нажатие кнопок из вкладки "Сеть"
 
 void MainPresenter::onConnectRequested()
 {
-    if (connecting || tcpConnected || disconnecting)
-    {
-        return;
-    }
+    if (connecting || tcpConnected || disconnecting) return;
 
     connecting = true;
     streamReady = false;
@@ -107,12 +54,53 @@ void MainPresenter::onDisconnectRequested()
     disconnectAll();
 }
 
+// Взаимодействие с CameraControlModel
+
+void MainPresenter::onConnected()
+{
+    if (disconnecting || !connecting) return;
+
+    tcpConnected = true;
+
+    qInfo() << "TCP: соединение установлено, порт 5000";
+
+    view->setConnectionStatus("Connecting GStreamer...");
+
+    // Запускаем приём RAW после установления TCP-соединения.
+    videoStreamModel->startReceiving();
+}
+
+void MainPresenter::onDisconnected(bool requestedByUser)
+{
+    qInfo() << "TCP: соединение разорвано";
+
+    tcpConnected = false;
+
+    if (disconnecting) return;
+
+    const bool connectionLost = !requestedByUser && !connecting;
+
+    disconnectAll();
+
+    if (connectionLost) view->showConnectionLost();
+}
+
+void MainPresenter::onErrorOccurred(const QString& error)
+{
+    if (disconnecting) return;
+
+    qWarning() << "TCP:" << error;
+
+    view->setConnectionStatus("Connection failed: " + error);
+
+    disconnectAll();
+}
+
+// Взаимодействие с VideoStreamModel
+
 void MainPresenter::onFrameReceived(const QByteArray& frame)
 {
-    if (disconnecting || !connecting || !tcpConnected || streamReady || frame.isEmpty())
-    {
-        return;
-    }
+    if (disconnecting || !connecting || !tcpConnected || streamReady || frame.isEmpty()) return;
 
     streamReady = true;
     connecting = false;
@@ -126,10 +114,7 @@ void MainPresenter::onFrameReceived(const QByteArray& frame)
 
 void MainPresenter::onStreamError(const QString& error)
 {
-    if (disconnecting || (!connecting && !tcpConnected))
-    {
-        return;
-    }
+    if (disconnecting || (!connecting && !tcpConnected)) return;
 
     qWarning() << "GStreamer:" << error;
 
@@ -139,20 +124,14 @@ void MainPresenter::onStreamError(const QString& error)
 
     disconnectAll();
 
-    if (connectionLost)
-    {
-        view->showConnectionLost();
-    }
+    if (connectionLost) view->showConnectionLost();
 }
 
 void MainPresenter::onStreamStopped()
 {
     qInfo() << "GStreamer: приём видеопотока завершён";
 
-    if (disconnecting || (!connecting && !tcpConnected))
-    {
-        return;
-    }
+    if (disconnecting || (!connecting && !tcpConnected)) return;
 
     const bool connectionLost = streamReady;
 
@@ -160,18 +139,14 @@ void MainPresenter::onStreamStopped()
 
     disconnectAll();
 
-    if (connectionLost)
-    {
-        view->showConnectionLost();
-    }
+    if (connectionLost) view->showConnectionLost();
 }
+
+// Общие функции
 
 void MainPresenter::disconnectAll()
 {
-    if (disconnecting)
-    {
-        return;
-    }
+    if (disconnecting) return;
 
     disconnecting = true;
 
@@ -194,6 +169,8 @@ void MainPresenter::disconnectAll()
     disconnecting = false;
 }
 
+// Управление окнами
+
 void MainPresenter::onShowVideoRequested()
 {
     view->showVideoWindow();
@@ -206,4 +183,28 @@ void MainPresenter::onShowSubtractionRequested()
     view->showSubtractionWindow();
 
     qDebug() << "Запрошено окно вычитания опорного кадра";
+}
+
+// Тест
+
+void MainPresenter::updateFrameStatistics(size_t bytes)
+{
+    totalFrames_++;
+    intervalFrames_++;
+    intervalBytes_ += bytes;
+
+    const auto now = Clock::now();
+    const double elapsed = std::chrono::duration<double>(now - lastReport_).count();
+
+    if (elapsed < 1.0) return;
+
+    const double fps = intervalFrames_ / elapsed;
+    const double mbps = intervalBytes_ * 8.0 / elapsed / 1000000.0;
+
+    qInfo() << "Received:" << totalFrames_ << "| FPS:" << fps << "| Speed:" << mbps << "Mbps"
+            << "| Bytes:" << bytes;
+
+    intervalFrames_ = 0;
+    intervalBytes_ = 0;
+    lastReport_ = now;
 }

@@ -1,13 +1,44 @@
 #include "VideoStreamModel.h"
 
-#include <cstring>
+#include <gst/app/gstappsink.h>
 
 #include <QDebug>
-
-#include <gst/app/gstappsink.h>
+#include <chrono>
 
 VideoStreamModel::VideoStreamModel(QObject* parent) : QObject(parent)
 {
+}
+
+VideoStreamModel::~VideoStreamModel()
+{
+    stopReceiving();
+}
+
+void VideoStreamModel::updateStatistics(const QByteArray& frame)
+{
+    using Clock = std::chrono::steady_clock;
+
+    static auto lastReport = Clock::now();
+    static uint64_t totalFrames = 0;
+    static uint64_t intervalFrames = 0;
+    static uint64_t intervalBytes = 0;
+
+    totalFrames++;
+    intervalFrames++;
+    intervalBytes += frame.size();
+
+    const auto now = Clock::now();
+    const double elapsed = std::chrono::duration<double>(now - lastReport).count();
+
+    if (elapsed < 1.0) return;
+
+    qInfo() << "Received:" << totalFrames << "| FPS:" << intervalFrames / elapsed
+            << "| Speed:" << intervalBytes * 8.0 / elapsed / 1000000.0 << "Mbps"
+            << "| Bytes:" << frame.size();
+
+    intervalFrames = 0;
+    intervalBytes = 0;
+    lastReport = now;
 }
 
 void VideoStreamModel::startReceiving()
@@ -17,7 +48,7 @@ void VideoStreamModel::startReceiving()
     // Инициализация GStreamer.
     gst_init(nullptr, nullptr);
 
-    // Создание цепочки: TCP, распаковка GDP, получение кадров.
+    // Создание pipeline.
     const QString pipelineDescription =
         QString("tcpclientsrc host=%1 port=%2 ! gdpdepay ! appsink name=%3 sync=false max-buffers=%4 drop=true")
             .arg(STREAM_HOST)
@@ -30,7 +61,7 @@ void VideoStreamModel::startReceiving()
 
     if (error)
     {
-        qWarning() << "Ошибка GStreamer:" << error->message;
+        const QString errorText = QString::fromUtf8(error->message);
         g_error_free(error);
 
         if (pipeline)
@@ -39,43 +70,43 @@ void VideoStreamModel::startReceiving()
             pipeline = nullptr;
         }
 
+        emit streamError(errorText);
         return;
     }
 
     if (!pipeline)
     {
-        qWarning() << "Не удалось создать GStreamer pipeline";
+        emit streamError(QStringLiteral("Не удалось создать GStreamer pipeline"));
         return;
     }
 
-    // Запуск pipeline (переход в состояние PLAYING).
+    // Запуск pipeline.
     const GstStateChangeReturn result = gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
     if (result == GST_STATE_CHANGE_FAILURE)
     {
-        qWarning() << "Не удалось запустить GStreamer pipeline";
-
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(pipeline);
         pipeline = nullptr;
+
+        emit streamError(QStringLiteral("Не удалось запустить GStreamer pipeline"));
         return;
     }
 
-    // Запуск приёма кадров в отдельном потоке.
+    // Запуск потока приёма кадров.
     receiving = true;
     receivingThread = std::thread(&VideoStreamModel::receivingLoop, this);
 }
 
 void VideoStreamModel::stopReceiving()
 {
-    // Остановка цикла и ожидание завершения потока.
     receiving = false;
 
     if (receivingThread.joinable()) receivingThread.join();
 
     if (!pipeline) return;
 
-    // Остановка GStreamer и освобождение pipeline.
+    // Остановка и освобождение pipeline.
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(pipeline);
     pipeline = nullptr;
@@ -83,17 +114,27 @@ void VideoStreamModel::stopReceiving()
 
 void VideoStreamModel::receivingLoop()
 {
-    if (!pipeline) return;
-
     GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), APP_SINK_NAME);
-    if (!sink) return;
+
+    if (!sink)
+    {
+        receiving = false;
+        emit streamError(QStringLiteral("Не удалось получить GStreamer appsink"));
+        emit streamStopped();
+        return;
+    }
 
     GstAppSink* appSink = GST_APP_SINK(sink);
+    GstBus* bus = gst_element_get_bus(pipeline);
 
     while (receiving)
     {
-        processBusMessages();
+        // Проверка сообщений GStreamer без ожидания.
+        processBusMessages(bus);
 
+        if (!receiving) break;
+
+        // Ожидание очередного кадра.
         GstSample* sample =
             gst_app_sink_try_pull_sample(appSink, static_cast<GstClockTime>(SAMPLE_TIMEOUT_MS) * GST_MSECOND);
 
@@ -103,97 +144,43 @@ void VideoStreamModel::receivingLoop()
             continue;
         }
 
-        // Получение буфера и описания формата.
         GstBuffer* buffer = gst_sample_get_buffer(sample);
-        GstCaps* caps = gst_sample_get_caps(sample);
-
-        if (!buffer || !caps || gst_caps_is_empty(caps) || gst_caps_is_any(caps))
-        {
-            qWarning() << "Отсутствуют данные кадра или описание формата";
-            gst_sample_unref(sample);
-            continue;
-        }
-
-        const GstStructure* structure = gst_caps_get_structure(caps, 0);
-
-        int width = 0;
-        int height = 0;
-        int stride = 0;
-        const char* format = gst_structure_get_string(structure, "format");
-
-        // Проверка типа RAW10 и обязательных параметров.
-        if (!gst_structure_has_name(structure, RAW_CAPS_NAME) || !format || strcmp(format, RAW_FORMAT) != 0 ||
-            !gst_structure_get_int(structure, "width", &width) ||
-            !gst_structure_get_int(structure, "height", &height) ||
-            !gst_structure_get_int(structure, "stride", &stride))
-        {
-            qWarning() << "Неподдерживаемый формат или неполные метаданные RAW";
-            gst_sample_unref(sample);
-            continue;
-        }
-
-        // Проверка разрешения и минимального размера строки RAW10.
-        const qint64 minimumStride = (static_cast<qint64>(width) * 10 + 7) / 8;
-
-        if (width <= 0 || width > MAX_FRAME_WIDTH || height <= 0 || height > MAX_FRAME_HEIGHT || stride < minimumStride)
-        {
-            qWarning() << "Недопустимые параметры RAW-кадра:" << width << height << stride;
-            gst_sample_unref(sample);
-            continue;
-        }
-
-        // Размер кадра должен учитывать выравнивание строк.
-        const quint64 expectedSize = static_cast<quint64>(stride) * height;
-
-        if (gst_buffer_get_size(buffer) != expectedSize)
-        {
-            qWarning() << "Несоответствие размера RAW-кадра:" << gst_buffer_get_size(buffer)
-                       << "ожидалось:" << expectedSize;
-            gst_sample_unref(sample);
-            continue;
-        }
-
         GstMapInfo map;
 
-        // Чтение исходных байтов без изменения значений пикселей.
-        if (gst_buffer_map(buffer, &map, GST_MAP_READ))
+        // Копирование исходных байтов кадра.
+        if (buffer && gst_buffer_map(buffer, &map, GST_MAP_READ))
         {
             QByteArray frame(reinterpret_cast<const char*>(map.data), static_cast<qsizetype>(map.size));
 
             gst_buffer_unmap(buffer, &map);
 
             if (receiving) emit frameReceived(frame);
-
-            if (receiving)
-            {
-                qDebug().noquote() << "RAW-кадр:"
-                                   << "Разрешение:" << width << "x" << height << "| Формат:" << format
-                                   << "| Stride:" << stride << "| Размер:" << frame.size() << "байт";
-            }
+            if (receiving) updateStatistics(frame);
         }
 
         gst_sample_unref(sample);
     }
 
+    // Освобождение ресурсов.
+    if (bus) gst_object_unref(bus);
     gst_object_unref(sink);
 
     receiving = false;
     emit streamStopped();
 }
 
-void VideoStreamModel::processBusMessages()
+void VideoStreamModel::processBusMessages(GstBus* bus)
 {
-    if (!pipeline) return;
-
-    GstBus* bus = gst_element_get_bus(pipeline);
     if (!bus) return;
 
-    GstMessage* message = nullptr;
+    const GstMessageType messageTypes = static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
 
-    while ((message = gst_bus_timed_pop_filtered(bus, static_cast<GstClockTime>(BUS_TIMEOUT_MS) * GST_MSECOND,
-                                                 static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS))) !=
-           nullptr)
+    while (receiving)
     {
+        GstMessage* message = gst_bus_pop_filtered(bus, messageTypes);
+
+        if (!message) break;
+
         switch (GST_MESSAGE_TYPE(message))
         {
             case GST_MESSAGE_ERROR:
@@ -206,19 +193,16 @@ void VideoStreamModel::processBusMessages()
                 const QString errorText =
                     error ? QString::fromUtf8(error->message) : QStringLiteral("Неизвестная ошибка GStreamer");
 
-                qWarning() << "Ошибка видеопотока:" << errorText;
-                emit streamError(errorText);
-
                 if (error) g_error_free(error);
                 if (debug) g_free(debug);
 
                 receiving = false;
+                emit streamError(errorText);
                 break;
             }
 
             case GST_MESSAGE_EOS:
             {
-                qDebug() << "Видеопоток завершён";
                 receiving = false;
                 break;
             }
@@ -228,9 +212,5 @@ void VideoStreamModel::processBusMessages()
         }
 
         gst_message_unref(message);
-
-        if (!receiving) break;
     }
-
-    gst_object_unref(bus);
 }

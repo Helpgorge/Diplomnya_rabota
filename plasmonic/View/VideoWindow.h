@@ -1,15 +1,22 @@
 #pragma once
 
-#include <QWidget>
+#include <QOpenGLWidget>
+#include <QImage>
 
-class VideoWindow : public QWidget
+#include <opencv2/core.hpp>
+
+class VideoWindow : public QOpenGLWidget
 {
     Q_OBJECT
 
   public:
     explicit VideoWindow(QWidget* parent = nullptr);
-    ~VideoWindow() override = default;
+
+    void showFrame(const cv::Mat& frame);
+
+  protected:
+    void paintGL() override;
 
   private:
-    void setupUi();
+    QImage image_;
 };

@@ -18,14 +18,17 @@ QMutex Logger::mutex;
 void Logger::initialize()
 {
     const QString logDirectory = QCoreApplication::applicationDirPath() + "/logs";
+
     QDir().mkpath(logDirectory);
 
-    const QString filename = logDirectory + "/" + QDate::currentDate().toString("yyyy-MM-dd") + ".log";
+    const QString filename =
+        logDirectory + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss-zzz") + ".log";
 
     logFile.setFileName(filename);
-    if (!logFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+
+    if (!logFile.open(QIODevice::WriteOnly | QIODevice::NewOnly | QIODevice::Text))
     {
-        fprintf(stderr, "Cannot open log file\n");
+        fprintf(stderr, "Cannot create log file\n");
     }
 
     qInstallMessageHandler(Logger::messageHandler);

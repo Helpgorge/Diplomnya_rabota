@@ -36,6 +36,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     connect(showVideoAction, &QAction::triggered, this, &MainWindow::showVideoRequested);
     connect(showSubtractionAction, &QAction::triggered, this, &MainWindow::showSubtractionRequested);
+
+    // Окна видеопотоков
+    videoWindow = new VideoWindow(this);
+    videoWindow->setWindowFlag(Qt::Window);
+    videoWindow->setWindowTitle("Исходный видеопоток");
+
+    subtractionWindow = new VideoWindow(this);
+    subtractionWindow->setWindowFlag(Qt::Window);
+    subtractionWindow->setWindowTitle("Вычитание опорного кадра");
 }
 
 void MainWindow::showConnectionProgress()
@@ -49,14 +58,12 @@ void MainWindow::showConnectionProgress()
     connectionDialog->setMinimumDuration(0);
     connectionDialog->setAutoClose(false);
     connectionDialog->show();
-    qDebug() << "Connection progress dialog show.";
 }
 
 void MainWindow::setConnectionStatus(const QString& text)
 {
     if (connectionDialog)
     {
-        qDebug() << "Set status:" << text;
         connectionDialog->setLabelText(text);
     }
 }
@@ -68,7 +75,6 @@ void MainWindow::closeConnectionProgress()
     connectionDialog->close();
     connectionDialog->deleteLater();
     connectionDialog = nullptr;
-    qDebug() << "Connection progress dialog closed.";
 }
 
 void MainWindow::onConnectClicked()
@@ -102,12 +108,6 @@ void MainWindow::showConnectionLost()
 
 void MainWindow::showVideoWindow()
 {
-    if (!videoWindow)
-    {
-        videoWindow = new VideoWindow(this);
-        videoWindow->setWindowTitle("Исходный видеопоток");
-    }
-
     videoWindow->show();
     videoWindow->raise();
     videoWindow->activateWindow();
@@ -115,12 +115,6 @@ void MainWindow::showVideoWindow()
 
 void MainWindow::showSubtractionWindow()
 {
-    if (!subtractionWindow)
-    {
-        subtractionWindow = new VideoWindow(this);
-        subtractionWindow->setWindowTitle("Вычитание опорного кадра");
-    }
-
     subtractionWindow->show();
     subtractionWindow->raise();
     subtractionWindow->activateWindow();

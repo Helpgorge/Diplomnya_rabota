@@ -2,6 +2,10 @@
 
 #include <QObject>
 
+// для тетста
+#include <chrono>
+#include <cstdint>
+
 class MainWindow;
 class CameraControlModel;
 class VideoStreamModel;
@@ -41,4 +45,16 @@ class MainPresenter : public QObject
     bool tcpConnected = false;
     bool streamReady = false;
     bool disconnecting = false;
+
+    // Тест
+
+    using Clock = std::chrono::steady_clock;
+
+    Clock::time_point lastReport_ = Clock::now();
+
+    uint64_t totalFrames_ = 0;
+    uint64_t intervalFrames_ = 0;
+    uint64_t intervalBytes_ = 0;
+
+    void updateFrameStatistics(size_t bytes);
 };

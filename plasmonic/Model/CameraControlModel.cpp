@@ -52,18 +52,6 @@ void CameraControlModel::onErrorOccurred(QAbstractSocket::SocketError error)
     emit errorOccurred(socket->errorString());
 }
 
-void CameraControlModel::startStream()
-{
-    const char command = static_cast<char>(Command::StartStream);
-    socket->write(&command, 1);
-}
-
-void CameraControlModel::stopStream()
-{
-    const char command = static_cast<char>(Command::StopStream);
-    socket->write(&command, 1);
-}
-
 void CameraControlModel::setExposure(quint32 exposure)
 {
     QByteArray data;
