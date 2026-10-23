@@ -1,21 +1,30 @@
 #pragma once
 
+#include <opencv2/core.hpp>
+
 #include <QObject>
 
+class MainWindow;
 class VideoStreamModel;
 class ImageProcessingModel;
-class MainWindow;
 
 class VideoPresenter : public QObject
 {
     Q_OBJECT
 
-  public:
-    explicit VideoPresenter(VideoStreamModel* stream, ImageProcessingModel* processing, QObject* parent = nullptr);
+  private slots:
+    void onShowVideoRequested();
+    void onShowSubtractionRequested();
 
-    void showVideoWindow(MainWindow* mainWindow);
-    void showSubtractionWindow(MainWindow* mainWindow);
+  public:
+    explicit VideoPresenter(MainWindow* view, VideoStreamModel* stream, ImageProcessingModel* processing,
+                            QObject* parent = nullptr);
 
   private:
-    ImageProcessingModel* processing_;
+    void onFrameReady(const cv::Mat& frame);
+    void onSubtractionReady(const cv::Mat& frame);
+    void onSelectReferenceFrameRequested();
+
+    ImageProcessingModel* processing_ = nullptr;
+    MainWindow* view = nullptr;
 };

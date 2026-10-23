@@ -2,16 +2,15 @@
 #include "MainWindow.h"
 #include "CameraControlModel.h"
 #include "VideoStreamModel.h"
-#include "VideoPresenter.h"
+#include "ControlCameraWindow.h"
 
 #include <QDebug>
 
 MainPresenter::MainPresenter(MainWindow* view, CameraControlModel* сameraControlModel,
-                             VideoStreamModel* videoStreamModel, VideoPresenter* videoPresenter)
-    : view(view), сameraControlModel(сameraControlModel), videoStreamModel(videoStreamModel),
-      videoPresenter(videoPresenter)
+                             VideoStreamModel* videoStreamModel)
+    : view(view), сameraControlModel(сameraControlModel), videoStreamModel(videoStreamModel)
 {
-    // Сигналы управляющего TCP-соединения.
+    // Сигналы управляющего TCP-соединения
     QObject::connect(сameraControlModel, &CameraControlModel::connected, this, &MainPresenter::onConnected);
     QObject::connect(сameraControlModel, &CameraControlModel::disconnected, this, &MainPresenter::onDisconnected);
     QObject::connect(сameraControlModel, &CameraControlModel::errorOccurred, this, &MainPresenter::onErrorOccurred);
@@ -21,18 +20,17 @@ MainPresenter::MainPresenter(MainWindow* view, CameraControlModel* сameraContro
     QObject::connect(view, &MainWindow::exposureChanged, сameraControlModel, &CameraControlModel::setExposure);
     QObject::connect(view, &MainWindow::gainChanged, сameraControlModel, &CameraControlModel::setGain);
 
-    // Запросы подключения и отключения.
+    // Запросы подключения и отключения
     QObject::connect(view, &MainWindow::connectRequested, this, &MainPresenter::onConnectRequested);
     QObject::connect(view, &MainWindow::disconnectRequested, this, &MainPresenter::onDisconnectRequested);
 
-    // Сигналы GStreamer.
+    // Сигналы GStreamer
     QObject::connect(videoStreamModel, &VideoStreamModel::frameReceived, this, &MainPresenter::onFrameReceived);
     QObject::connect(videoStreamModel, &VideoStreamModel::streamError, this, &MainPresenter::onStreamError);
     QObject::connect(videoStreamModel, &VideoStreamModel::streamStopped, this, &MainPresenter::onStreamStopped);
 
-    // Запросы отображения окон.
-    QObject::connect(view, &MainWindow::showVideoRequested, this, &MainPresenter::onShowVideoRequested);
-    QObject::connect(view, &MainWindow::showSubtractionRequested, this, &MainPresenter::onShowSubtractionRequested);
+    // Запросы отображения окон
+
     QObject::connect(view, &MainWindow::showCameraControlRequested, this, &MainPresenter::onShowCameraControlRequested);
 }
 
@@ -178,42 +176,24 @@ void MainPresenter::disconnectAll()
 }
 
 // Управление окнами
-// Окна видео
-void MainPresenter::onShowVideoRequested()
-{
-    videoPresenter->showVideoWindow(view);
-}
-
-void MainPresenter::onShowSubtractionRequested()
-{
-    videoPresenter->showSubtractionWindow(view);
-}
-
-// Окна управление камерой
+// Окно управление камерой
 void MainPresenter::onShowCameraControlRequested()
 {
     view->showControlCameraWindow();
+
+    connect(view->getControlCameraWindow(), &ControlCameraWindow::gainChanged, this, &MainPresenter::onGainChanged,
+            Qt::UniqueConnection);
+
+    connect(view->getControlCameraWindow(), &ControlCameraWindow::exposureChanged, this,
+            &MainPresenter::onExposureChanged, Qt::UniqueConnection);
 }
-// Тест
 
-void MainPresenter::updateFrameStatistics(size_t bytes)
+void MainPresenter::onGainChanged(float gain)
 {
-    totalFrames_++;
-    intervalFrames_++;
-    intervalBytes_ += bytes;
+    сameraControlModel->setGain(gain);
+}
 
-    const auto now = Clock::now();
-    const double elapsed = std::chrono::duration<double>(now - lastReport_).count();
-
-    if (elapsed < 1.0) return;
-
-    const double fps = intervalFrames_ / elapsed;
-    const double mbps = intervalBytes_ * 8.0 / elapsed / 1000000.0;
-
-    qInfo() << "Received:" << totalFrames_ << "| FPS:" << fps << "| Speed:" << mbps << "Mbps"
-            << "| Bytes:" << bytes;
-
-    intervalFrames_ = 0;
-    intervalBytes_ = 0;
-    lastReport_ = now;
+void MainPresenter::onExposureChanged(quint32 exposure)
+{
+    сameraControlModel->setExposure(exposure);
 }

@@ -28,9 +28,9 @@ int main(int argc, char* argv[])
         MainWindow window;
 
         // Presenter
-        VideoPresenter videoPresenter(&videoStreamModel, &imageProcessingModel);
+        MainPresenter mainPresenter(&window, &cameraControlModel, &videoStreamModel);
 
-        MainPresenter mainPresenter(&window, &cameraControlModel, &videoStreamModel, &videoPresenter);
+        VideoPresenter videoPresenter(&window, &videoStreamModel, &imageProcessingModel);
 
         window.show();
 

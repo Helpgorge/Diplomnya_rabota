@@ -1,11 +1,17 @@
-
 #include "ImageProcessingModel.h"
+#include <QtConcurrent>
 
 ImageProcessingModel::ImageProcessingModel(QObject* parent) : QObject(parent)
 {
 }
 
 void ImageProcessingModel::processFrame(const QByteArray& frame)
+{
+    if (processingFuture_.isRunning()) return;
+    QtConcurrent::run([this, frame]() { processFrameWorker(frame); });
+}
+
+void ImageProcessingModel::processFrameWorker(const QByteArray& frame)
 {
     constexpr int width = 1920;
     constexpr int height = 1080;
@@ -35,5 +41,27 @@ void ImageProcessingModel::processFrame(const QByteArray& frame)
     cv::Mat preview;
     raw.convertTo(preview, CV_8UC1, 1.0 / 4.0);
 
-    Q_EMIT frameReady(preview);
+    emit frameReady(preview);
+
+    if (referenceRequested_)
+    {
+        referenceFrame_ = raw.clone();
+        referenceRequested_ = false;
+    }
+
+    if (referenceFrame_.empty()) referenceFrame_ = raw.clone();
+
+    cv::Mat difference;
+    cv::subtract(raw, referenceFrame_, difference);
+
+    cv::Mat subtractionPreview;
+    difference.convertTo(subtractionPreview, CV_8UC1, 0.25);
+
+    emit subtractionReady(subtractionPreview);
+}
+
+void ImageProcessingModel::selectReferenceFrame()
+{
+    processingFuture_.waitForFinished();
+    referenceRequested_ = true;
 }

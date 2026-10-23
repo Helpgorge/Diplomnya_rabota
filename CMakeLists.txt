@@ -22,6 +22,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     Gui
     Widgets
     Network
+    Concurrent
 )
 
 # OpenCV
@@ -104,6 +105,7 @@ target_link_libraries(plasmonic PRIVATE
     Qt6::Gui
     Qt6::Widgets
     Qt6::Network
+    Qt6::Concurrent
 
     ${OpenCV_LIBS}
 

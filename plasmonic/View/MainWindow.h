@@ -26,6 +26,7 @@ class MainWindow : public QMainWindow
 
     VideoWindow* getVideoWindow() const;
     VideoWindow* getSubtractionWindow() const;
+    ControlCameraWindow* getControlCameraWindow() const;
 
   signals:
     void connectRequested();
@@ -38,6 +39,8 @@ class MainWindow : public QMainWindow
     void exposureChanged(quint32 exposure);
     void gainChanged(float gain);
 
+    void selectReferenceFrameRequested();
+
   private slots:
     void onConnectClicked();
     void onDisconnectClicked();
@@ -48,6 +51,7 @@ class MainWindow : public QMainWindow
     QAction* showVideoAction = nullptr;
     QAction* showSubtractionAction = nullptr;
     QAction* cameraAction = nullptr;
+    QAction* selectReferenceFrameAction = nullptr;
 
     QProgressDialog* connectionDialog = nullptr;
     VideoWindow* videoWindow = nullptr;

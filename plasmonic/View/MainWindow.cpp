@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     connectTcpAction = networkMenu->addAction("Установить соединение");
     disconnectTcpAction = networkMenu->addAction("Разорвать соединение");
+    selectReferenceFrameAction = processingMenu->addAction("Выбрать опорный кадр");
 
     showVideoAction = windowsMenu->addAction("Исходный видеопоток");
     showSubtractionAction = windowsMenu->addAction("Вычитание опорного кадра");
@@ -41,6 +42,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(showSubtractionAction, &QAction::triggered, this, &MainWindow::showSubtractionRequested);
     connect(cameraAction, &QAction::triggered, this, &MainWindow::showCameraControlRequested);
 
+    connect(selectReferenceFrameAction, &QAction::triggered, this, &MainWindow::selectReferenceFrameRequested);
+
     // Окна видеопотоков
     videoWindow = new VideoWindow(this);
     videoWindow->setWindowFlag(Qt::Window);
@@ -49,6 +52,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     subtractionWindow = new VideoWindow(this);
     subtractionWindow->setWindowFlag(Qt::Window);
     subtractionWindow->setWindowTitle("Вычитание опорного кадра");
+
+    // Окно управление камерой
+    controlCameraWindow = new ControlCameraWindow(this);
 }
 
 // Управление подключением к камере
@@ -142,15 +148,12 @@ VideoWindow* MainWindow::getSubtractionWindow() const
 // Окна с параметрами камеры
 void MainWindow::showControlCameraWindow()
 {
-    if (!controlCameraWindow)
-    {
-        controlCameraWindow = new ControlCameraWindow(this);
-
-        connect(controlCameraWindow, &ControlCameraWindow::exposureChanged, this, &MainWindow::exposureChanged);
-        connect(controlCameraWindow, &ControlCameraWindow::gainChanged, this, &MainWindow::gainChanged);
-    }
-
     controlCameraWindow->show();
     controlCameraWindow->raise();
     controlCameraWindow->activateWindow();
+}
+
+ControlCameraWindow* MainWindow::getControlCameraWindow() const
+{
+    return controlCameraWindow;
 }
