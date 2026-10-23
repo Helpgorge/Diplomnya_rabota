@@ -9,11 +9,13 @@
 class MainWindow;
 class CameraControlModel;
 class VideoStreamModel;
+class VideoPresenter;
 
 class MainPresenter : public QObject
 {
   public:
-    explicit MainPresenter(MainWindow* window, CameraControlModel* CameraControl, VideoStreamModel* videoStreamModel);
+    explicit MainPresenter(MainWindow* view, CameraControlModel* сameraControlModel, VideoStreamModel* videoStreamModel,
+                           VideoPresenter* videoPresenter);
 
   private slots:
     // TCP.
@@ -33,6 +35,7 @@ class MainPresenter : public QObject
     // Окна.
     void onShowVideoRequested();
     void onShowSubtractionRequested();
+    void onShowCameraControlRequested();
 
   private:
     void disconnectAll();
@@ -40,6 +43,7 @@ class MainPresenter : public QObject
     MainWindow* view = nullptr;
     CameraControlModel* сameraControlModel = nullptr;
     VideoStreamModel* videoStreamModel = nullptr;
+    VideoPresenter* videoPresenter = nullptr;
 
     bool connecting = false;
     bool tcpConnected = false;

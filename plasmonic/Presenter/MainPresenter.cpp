@@ -2,17 +2,24 @@
 #include "MainWindow.h"
 #include "CameraControlModel.h"
 #include "VideoStreamModel.h"
+#include "VideoPresenter.h"
 
 #include <QDebug>
 
 MainPresenter::MainPresenter(MainWindow* view, CameraControlModel* сameraControlModel,
-                             VideoStreamModel* videoStreamModel)
-    : view(view), сameraControlModel(сameraControlModel), videoStreamModel(videoStreamModel)
+                             VideoStreamModel* videoStreamModel, VideoPresenter* videoPresenter)
+    : view(view), сameraControlModel(сameraControlModel), videoStreamModel(videoStreamModel),
+      videoPresenter(videoPresenter)
 {
     // Сигналы управляющего TCP-соединения.
     QObject::connect(сameraControlModel, &CameraControlModel::connected, this, &MainPresenter::onConnected);
     QObject::connect(сameraControlModel, &CameraControlModel::disconnected, this, &MainPresenter::onDisconnected);
     QObject::connect(сameraControlModel, &CameraControlModel::errorOccurred, this, &MainPresenter::onErrorOccurred);
+
+    // Сигналы управления камерой
+
+    QObject::connect(view, &MainWindow::exposureChanged, сameraControlModel, &CameraControlModel::setExposure);
+    QObject::connect(view, &MainWindow::gainChanged, сameraControlModel, &CameraControlModel::setGain);
 
     // Запросы подключения и отключения.
     QObject::connect(view, &MainWindow::connectRequested, this, &MainPresenter::onConnectRequested);
@@ -26,6 +33,7 @@ MainPresenter::MainPresenter(MainWindow* view, CameraControlModel* сameraContro
     // Запросы отображения окон.
     QObject::connect(view, &MainWindow::showVideoRequested, this, &MainPresenter::onShowVideoRequested);
     QObject::connect(view, &MainWindow::showSubtractionRequested, this, &MainPresenter::onShowSubtractionRequested);
+    QObject::connect(view, &MainWindow::showCameraControlRequested, this, &MainPresenter::onShowCameraControlRequested);
 }
 
 // Реакции на нажатие кнопок из вкладки "Сеть"
@@ -170,21 +178,22 @@ void MainPresenter::disconnectAll()
 }
 
 // Управление окнами
-
+// Окна видео
 void MainPresenter::onShowVideoRequested()
 {
-    view->showVideoWindow();
-
-    qDebug() << "Запрошено окно исходного видеопотока";
+    videoPresenter->showVideoWindow(view);
 }
 
 void MainPresenter::onShowSubtractionRequested()
 {
-    view->showSubtractionWindow();
-
-    qDebug() << "Запрошено окно вычитания опорного кадра";
+    videoPresenter->showSubtractionWindow(view);
 }
 
+// Окна управление камерой
+void MainPresenter::onShowCameraControlRequested()
+{
+    view->showControlCameraWindow();
+}
 // Тест
 
 void MainPresenter::updateFrameStatistics(size_t bytes)

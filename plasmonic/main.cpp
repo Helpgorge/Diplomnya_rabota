@@ -2,29 +2,35 @@
 
 #include "MainWindow.h"
 #include "MainPresenter.h"
+#include "VideoPresenter.h"
+
 #include "CameraControlModel.h"
 #include "VideoStreamModel.h"
+#include "ImageProcessingModel.h"
+
 #include "Logger.h"
 
 int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
 
-    // Логи
     Logger::initialize();
 
     int result = 0;
 
     {
         // Model
-        CameraControlModel сameraControlModel;
+        CameraControlModel cameraControlModel;
         VideoStreamModel videoStreamModel;
+        ImageProcessingModel imageProcessingModel;
 
         // View
         MainWindow window;
 
         // Presenter
-        MainPresenter mainPresenter(&window, &сameraControlModel, &videoStreamModel);
+        VideoPresenter videoPresenter(&videoStreamModel, &imageProcessingModel);
+
+        MainPresenter mainPresenter(&window, &cameraControlModel, &videoStreamModel, &videoPresenter);
 
         window.show();
 

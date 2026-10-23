@@ -1,5 +1,6 @@
 ﻿#include "MainWindow.h"
 #include "VideoWindow.h"
+#include "ControlCameraWindow.h"
 
 #include <QWidget>
 #include <QMenuBar>
@@ -29,6 +30,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     showVideoAction = windowsMenu->addAction("Исходный видеопоток");
     showSubtractionAction = windowsMenu->addAction("Вычитание опорного кадра");
 
+    cameraAction = processingMenu->addAction("Управление камерой");
+
     setConnected(false, false);
 
     connect(connectTcpAction, &QAction::triggered, this, &MainWindow::onConnectClicked);
@@ -36,6 +39,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     connect(showVideoAction, &QAction::triggered, this, &MainWindow::showVideoRequested);
     connect(showSubtractionAction, &QAction::triggered, this, &MainWindow::showSubtractionRequested);
+    connect(cameraAction, &QAction::triggered, this, &MainWindow::showCameraControlRequested);
 
     // Окна видеопотоков
     videoWindow = new VideoWindow(this);
@@ -47,6 +51,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     subtractionWindow->setWindowTitle("Вычитание опорного кадра");
 }
 
+// Управление подключением к камере
+// Прогресс подключения
 void MainWindow::showConnectionProgress()
 {
     connectionDialog = new QProgressDialog(this);
@@ -77,6 +83,12 @@ void MainWindow::closeConnectionProgress()
     connectionDialog = nullptr;
 }
 
+void MainWindow::showConnectionLost()
+{
+    QMessageBox::warning(this, "Соединение", "Соединение с сервером было разорвано.");
+}
+
+// Кнопки подклоючитсья и отключиться
 void MainWindow::onConnectClicked()
 {
     emit connectRequested();
@@ -87,6 +99,7 @@ void MainWindow::onDisconnectClicked()
     emit disconnectRequested();
 }
 
+// Кликабельность кнопок подклоючитсья и отключиться
 void MainWindow::setConnected(bool connected, bool inProgress)
 {
     if (inProgress)
@@ -101,11 +114,7 @@ void MainWindow::setConnected(bool connected, bool inProgress)
     }
 }
 
-void MainWindow::showConnectionLost()
-{
-    QMessageBox::warning(this, "Соединение", "Соединение с сервером было разорвано.");
-}
-
+// Окна с видео
 void MainWindow::showVideoWindow()
 {
     videoWindow->show();
@@ -118,4 +127,30 @@ void MainWindow::showSubtractionWindow()
     subtractionWindow->show();
     subtractionWindow->raise();
     subtractionWindow->activateWindow();
+}
+
+VideoWindow* MainWindow::getVideoWindow() const
+{
+    return videoWindow;
+}
+
+VideoWindow* MainWindow::getSubtractionWindow() const
+{
+    return subtractionWindow;
+}
+
+// Окна с параметрами камеры
+void MainWindow::showControlCameraWindow()
+{
+    if (!controlCameraWindow)
+    {
+        controlCameraWindow = new ControlCameraWindow(this);
+
+        connect(controlCameraWindow, &ControlCameraWindow::exposureChanged, this, &MainWindow::exposureChanged);
+        connect(controlCameraWindow, &ControlCameraWindow::gainChanged, this, &MainWindow::gainChanged);
+    }
+
+    controlCameraWindow->show();
+    controlCameraWindow->raise();
+    controlCameraWindow->activateWindow();
 }

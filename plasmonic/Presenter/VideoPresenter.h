@@ -4,13 +4,18 @@
 
 class VideoStreamModel;
 class ImageProcessingModel;
-class VideoWindow;
+class MainWindow;
 
 class VideoPresenter : public QObject
 {
     Q_OBJECT
 
   public:
-    explicit VideoPresenter(VideoStreamModel* stream, ImageProcessingModel* processing, VideoWindow* window,
-                            QObject* parent = nullptr);
+    explicit VideoPresenter(VideoStreamModel* stream, ImageProcessingModel* processing, QObject* parent = nullptr);
+
+    void showVideoWindow(MainWindow* mainWindow);
+    void showSubtractionWindow(MainWindow* mainWindow);
+
+  private:
+    ImageProcessingModel* processing_;
 };

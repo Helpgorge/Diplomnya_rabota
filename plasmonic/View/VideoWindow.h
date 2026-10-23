@@ -1,11 +1,13 @@
 #pragma once
 
-#include <QOpenGLWidget>
-#include <QImage>
+#include <QWidget>
+#include <QLabel>
+#include <QAction>
+#include <QKeyEvent>
 
 #include <opencv2/core.hpp>
 
-class VideoWindow : public QOpenGLWidget
+class VideoWindow : public QWidget
 {
     Q_OBJECT
 
@@ -15,8 +17,13 @@ class VideoWindow : public QOpenGLWidget
     void showFrame(const cv::Mat& frame);
 
   protected:
-    void paintGL() override;
+    void keyPressEvent(QKeyEvent* event) override;
 
   private:
-    QImage image_;
+    void onScaleSelected(QAction* action);
+    void enterFullscreen();
+    void exitFullscreen();
+
+    QLabel* imageLabel_;
+    int currentScale_ = 50;
 };

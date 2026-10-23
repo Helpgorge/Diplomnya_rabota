@@ -4,6 +4,7 @@
 #include <QProgressDialog>
 
 class VideoWindow;
+class ControlCameraWindow;
 
 class MainWindow : public QMainWindow
 {
@@ -19,8 +20,12 @@ class MainWindow : public QMainWindow
     void showConnectionLost();
     void showVideoWindow();
     void showSubtractionWindow();
+    void showControlCameraWindow();
 
     void closeConnectionProgress();
+
+    VideoWindow* getVideoWindow() const;
+    VideoWindow* getSubtractionWindow() const;
 
   signals:
     void connectRequested();
@@ -28,6 +33,10 @@ class MainWindow : public QMainWindow
 
     void showVideoRequested();
     void showSubtractionRequested();
+    void showCameraControlRequested();
+
+    void exposureChanged(quint32 exposure);
+    void gainChanged(float gain);
 
   private slots:
     void onConnectClicked();
@@ -38,8 +47,10 @@ class MainWindow : public QMainWindow
     QAction* disconnectTcpAction = nullptr;
     QAction* showVideoAction = nullptr;
     QAction* showSubtractionAction = nullptr;
+    QAction* cameraAction = nullptr;
 
     QProgressDialog* connectionDialog = nullptr;
     VideoWindow* videoWindow = nullptr;
     VideoWindow* subtractionWindow = nullptr;
+    ControlCameraWindow* controlCameraWindow = nullptr;
 };

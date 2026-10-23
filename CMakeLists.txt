@@ -22,8 +22,6 @@ find_package(Qt6 REQUIRED COMPONENTS
     Gui
     Widgets
     Network
-    OpenGL
-    OpenGLWidgets
 )
 
 # OpenCV
@@ -79,6 +77,9 @@ qt_add_executable(plasmonic
 
     plasmonic/View/VideoWindow.h
     plasmonic/View/VideoWindow.cpp
+    
+    plasmonic/View/ControlCameraWindow.h
+    plasmonic/View/ControlCameraWindow.cpp
 )
 
 # ============================================================
@@ -103,8 +104,6 @@ target_link_libraries(plasmonic PRIVATE
     Qt6::Gui
     Qt6::Widgets
     Qt6::Network
-    Qt6::OpenGL
-    Qt6::OpenGLWidgets
 
     ${OpenCV_LIBS}
 
