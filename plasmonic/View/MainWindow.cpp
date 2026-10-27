@@ -1,6 +1,5 @@
 ﻿#include "MainWindow.h"
 #include "VideoWindow.h"
-#include "ControlCameraWindow.h"
 
 #include <QWidget>
 #include <QMenuBar>
@@ -31,20 +30,36 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     showVideoAction = windowsMenu->addAction("Исходный видеопоток");
     showSubtractionAction = windowsMenu->addAction("Вычитание опорного кадра");
 
-    cameraAction = processingMenu->addAction("Управление камерой");
+    startRecordingAction = recordingMenu->addAction("Начать запись");
+    stopRecordingAction = recordingMenu->addAction("Остановить запись");
+    startRecordingAction->setEnabled(false);
+    stopRecordingAction->setEnabled(false);
+
+    recordingMenu->addSeparator();
+    saveSelectedFrameAction = recordingMenu->addAction("Сохранить выбранный кадр");
+    saveSelectedFrameAction->setEnabled(false);
 
     setConnected(false, false);
 
-    connect(connectTcpAction, &QAction::triggered, this, &MainWindow::onConnectClicked);
-    connect(disconnectTcpAction, &QAction::triggered, this, &MainWindow::onDisconnectClicked);
+    // Сигналы на подключение и отключение по TCP
+    connect(connectTcpAction, &QAction::triggered, this, &MainWindow::connectRequested);
+    connect(disconnectTcpAction, &QAction::triggered, this, &MainWindow::disconnectRequested);
 
+    // Сигналы на отображение окон
     connect(showVideoAction, &QAction::triggered, this, &MainWindow::showVideoRequested);
     connect(showSubtractionAction, &QAction::triggered, this, &MainWindow::showSubtractionRequested);
-    connect(cameraAction, &QAction::triggered, this, &MainWindow::showCameraControlRequested);
 
+    // Сигнал на выбор кадра
     connect(selectReferenceFrameAction, &QAction::triggered, this, &MainWindow::selectReferenceFrameRequested);
 
-    // Окна видеопотоков
+    // Сигналы на запросы записи
+    connect(startRecordingAction, &QAction::triggered, this, &MainWindow::startRecordingRequested);
+    connect(stopRecordingAction, &QAction::triggered, this, &MainWindow::stopRecordingRequested);
+
+    // Сохранение кадра
+    connect(saveSelectedFrameAction, &QAction::triggered, this, &MainWindow::saveSelectedFrameRequested);
+
+    // Окна с видео
     videoWindow = new VideoWindow(this);
     videoWindow->setWindowFlag(Qt::Window);
     videoWindow->setWindowTitle("Исходный видеопоток");
@@ -52,60 +67,16 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     subtractionWindow = new VideoWindow(this);
     subtractionWindow->setWindowFlag(Qt::Window);
     subtractionWindow->setWindowTitle("Вычитание опорного кадра");
-
-    // Окно управление камерой
-    controlCameraWindow = new ControlCameraWindow(this);
 }
 
 // Управление подключением к камере
-// Прогресс подключения
-void MainWindow::showConnectionProgress()
+void MainWindow::showConnectionLost(const QString& message)
 {
-    connectionDialog = new QProgressDialog(this);
-
-    connectionDialog->setWindowTitle("Connection");
-    connectionDialog->setLabelText("Establishing TCP connection...");
-    connectionDialog->setRange(0, 0);
-    connectionDialog->setCancelButton(nullptr);
-    connectionDialog->setMinimumDuration(0);
-    connectionDialog->setAutoClose(false);
-    connectionDialog->show();
+    QMessageBox::warning(this, tr("Соединение"), tr("Соединение с сервером было разорвано.\nПричина: %1").arg(message));
 }
 
-void MainWindow::setConnectionStatus(const QString& text)
-{
-    if (connectionDialog)
-    {
-        connectionDialog->setLabelText(text);
-    }
-}
-
-void MainWindow::closeConnectionProgress()
-{
-    if (!connectionDialog) return;
-
-    connectionDialog->close();
-    connectionDialog->deleteLater();
-    connectionDialog = nullptr;
-}
-
-void MainWindow::showConnectionLost()
-{
-    QMessageBox::warning(this, "Соединение", "Соединение с сервером было разорвано.");
-}
-
-// Кнопки подклоючитсья и отключиться
-void MainWindow::onConnectClicked()
-{
-    emit connectRequested();
-}
-
-void MainWindow::onDisconnectClicked()
-{
-    emit disconnectRequested();
-}
-
-// Кликабельность кнопок подклоючитсья и отключиться
+// Управление кнопками
+// Управление кнопоками подклоючитсья и отключиться
 void MainWindow::setConnected(bool connected, bool inProgress)
 {
     if (inProgress)
@@ -118,6 +89,22 @@ void MainWindow::setConnected(bool connected, bool inProgress)
         connectTcpAction->setEnabled(!connected);
         disconnectTcpAction->setEnabled(connected);
     }
+}
+
+// Управление кнопками записи
+void MainWindow::setStartRecordingEnabled(bool enabled)
+{
+    startRecordingAction->setEnabled(enabled);
+}
+
+void MainWindow::setStopRecordingEnabled(bool enabled)
+{
+    stopRecordingAction->setEnabled(enabled);
+}
+
+void MainWindow::setSaveSelectedFrameEnabled(bool enabled)
+{
+    saveSelectedFrameAction->setEnabled(enabled);
 }
 
 // Окна с видео
@@ -143,17 +130,4 @@ VideoWindow* MainWindow::getVideoWindow() const
 VideoWindow* MainWindow::getSubtractionWindow() const
 {
     return subtractionWindow;
-}
-
-// Окна с параметрами камеры
-void MainWindow::showControlCameraWindow()
-{
-    controlCameraWindow->show();
-    controlCameraWindow->raise();
-    controlCameraWindow->activateWindow();
-}
-
-ControlCameraWindow* MainWindow::getControlCameraWindow() const
-{
-    return controlCameraWindow;
 }

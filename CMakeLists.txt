@@ -57,9 +57,7 @@ qt_add_executable(plasmonic
     plasmonic/Core/Logger.h
     plasmonic/Core/Logger.cpp
 
-    # Model
-    plasmonic/Model/CameraControlModel.h
-    plasmonic/Model/CameraControlModel.cpp
+
     plasmonic/Model/ImageProcessingModel.h
     plasmonic/Model/ImageProcessingModel.cpp
 
@@ -78,9 +76,6 @@ qt_add_executable(plasmonic
 
     plasmonic/View/VideoWindow.h
     plasmonic/View/VideoWindow.cpp
-    
-    plasmonic/View/ControlCameraWindow.h
-    plasmonic/View/ControlCameraWindow.cpp
 )
 
 # ============================================================

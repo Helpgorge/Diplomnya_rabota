@@ -1,13 +1,9 @@
 #pragma once
 
 #include <QObject>
-#include <QByteArray>
+#include <QTcpSocket>
 #include <QString>
-
-#include <atomic>
-#include <thread>
-
-#include <gst/gst.h>
+#include <QByteArray>
 
 class VideoStreamModel : public QObject
 {
@@ -15,32 +11,24 @@ class VideoStreamModel : public QObject
 
   public:
     explicit VideoStreamModel(QObject* parent = nullptr);
-    ~VideoStreamModel() override;
 
-    void startReceiving();
-    void stopReceiving();
-
-    // Тест
-    void updateStatistics(const QByteArray& frame);
+    void connectToServer();
+    void disconnectFromServer();
 
   signals:
-    void frameReceived(const QByteArray& frame);
-    void streamError(const QString& error);
-    void streamStopped();
+    void frameReceived(QByteArray& frame);
+    void connectionError(const QString& message);
+    void connected();
 
   private:
-    void receivingLoop();
-    void processBusMessages(GstBus* bus);
+    void receiveFrames();
+    void handleConnectionError();
 
-    GstElement* pipeline = nullptr;
+    QString m_host = "192.168.50.1";
+    quint16 m_port = 5000;
+    QTcpSocket* m_socket = nullptr;
 
-    std::thread receivingThread;
-    std::atomic_bool receiving{false};
-
-    static constexpr const char* STREAM_HOST = "192.168.50.1";
-    static constexpr int STREAM_PORT = 5001;
-    static constexpr const char* APP_SINK_NAME = "rawsink";
-
-    static constexpr int MAX_BUFFERS = 4;
-    static constexpr int SAMPLE_TIMEOUT_MS = 100;
+    static constexpr int FrameSize = 2592000;
+    QByteArray m_receiveBuffer;
+    QByteArray m_frame;
 };

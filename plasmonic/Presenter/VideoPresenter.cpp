@@ -11,13 +11,16 @@ VideoPresenter::VideoPresenter(MainWindow* view, VideoStreamModel* stream, Image
 {
     connect(stream, &VideoStreamModel::frameReceived, processing_, &ImageProcessingModel::processFrame);
 
-    QObject::connect(view, &MainWindow::showVideoRequested, this, &VideoPresenter::onShowVideoRequested);
-    QObject::connect(view, &MainWindow::showSubtractionRequested, this, &VideoPresenter::onShowSubtractionRequested);
+    connect(view, &MainWindow::showVideoRequested, this, &VideoPresenter::onShowVideoRequested);
+    connect(view, &MainWindow::showSubtractionRequested, this, &VideoPresenter::onShowSubtractionRequested);
 
-    QObject::connect(processing_, &ImageProcessingModel::frameReady, this, &VideoPresenter::onFrameReady);
-    QObject::connect(processing_, &ImageProcessingModel::subtractionReady, this, &VideoPresenter::onSubtractionReady);
-    QObject::connect(view, &MainWindow::selectReferenceFrameRequested, this,
-                     &VideoPresenter::onSelectReferenceFrameRequested);
+    connect(view, &MainWindow::startRecordingRequested, this, &VideoPresenter::onStartRecordingRequested);
+    connect(view, &MainWindow::stopRecordingRequested, this, &VideoPresenter::onStopRecordingRequested);
+    connect(view, &MainWindow::saveSelectedFrameRequested, this, &VideoPresenter::onSaveSelectedFrameRequested);
+
+    connect(processing_, &ImageProcessingModel::frameReady, this, &VideoPresenter::onFrameReady);
+    connect(processing_, &ImageProcessingModel::subtractionReady, this, &VideoPresenter::onSubtractionReady);
+    connect(view, &MainWindow::selectReferenceFrameRequested, this, &VideoPresenter::onSelectReferenceFrameRequested);
 }
 
 // Окна видео
@@ -47,8 +50,28 @@ void VideoPresenter::onSubtractionReady(const cv::Mat& frame)
     }
 }
 
-// Выбор кадра
+// Выбор кадра и сохранение кадра
 void VideoPresenter::onSelectReferenceFrameRequested()
 {
     processing_->selectReferenceFrame();
+}
+
+void VideoPresenter::onSaveSelectedFrameRequested()
+{
+    processing_->saveSelectedFrame();
+}
+
+// Запись
+void VideoPresenter::onStartRecordingRequested()
+{
+    processing_->startRecording();
+    view->setStopRecordingEnabled(true);
+    view->setStartRecordingEnabled(false);
+}
+
+void VideoPresenter::onStopRecordingRequested()
+{
+    processing_->stopRecording();
+    view->setStopRecordingEnabled(false);
+    view->setStartRecordingEnabled(true);
 }

@@ -25,6 +25,10 @@ class VideoPresenter : public QObject
     void onSubtractionReady(const cv::Mat& frame);
     void onSelectReferenceFrameRequested();
 
+    void onStartRecordingRequested();
+    void onStopRecordingRequested();
+    void onSaveSelectedFrameRequested();
+
     ImageProcessingModel* processing_ = nullptr;
     MainWindow* view = nullptr;
 };

@@ -1,10 +1,10 @@
 ﻿#include <QApplication>
 
 #include "MainWindow.h"
+
 #include "MainPresenter.h"
 #include "VideoPresenter.h"
 
-#include "CameraControlModel.h"
 #include "VideoStreamModel.h"
 #include "ImageProcessingModel.h"
 
@@ -20,7 +20,6 @@ int main(int argc, char* argv[])
 
     {
         // Model
-        CameraControlModel cameraControlModel;
         VideoStreamModel videoStreamModel;
         ImageProcessingModel imageProcessingModel;
 
@@ -28,7 +27,7 @@ int main(int argc, char* argv[])
         MainWindow window;
 
         // Presenter
-        MainPresenter mainPresenter(&window, &cameraControlModel, &videoStreamModel);
+        MainPresenter mainPresenter(&window, &videoStreamModel);
 
         VideoPresenter videoPresenter(&window, &videoStreamModel, &imageProcessingModel);
 

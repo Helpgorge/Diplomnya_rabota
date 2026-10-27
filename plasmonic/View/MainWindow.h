@@ -4,7 +4,6 @@
 #include <QProgressDialog>
 
 class VideoWindow;
-class ControlCameraWindow;
 
 class MainWindow : public QMainWindow
 {
@@ -13,20 +12,18 @@ class MainWindow : public QMainWindow
   public:
     explicit MainWindow(QWidget* parent = nullptr);
 
-    void setConnectionStatus(const QString& text);
     void setConnected(bool connected, bool inProgress);
 
-    void showConnectionProgress();
-    void showConnectionLost();
+    void showConnectionLost(const QString& message);
     void showVideoWindow();
     void showSubtractionWindow();
-    void showControlCameraWindow();
-
-    void closeConnectionProgress();
 
     VideoWindow* getVideoWindow() const;
     VideoWindow* getSubtractionWindow() const;
-    ControlCameraWindow* getControlCameraWindow() const;
+
+    void setStartRecordingEnabled(bool enabled);
+    void setStopRecordingEnabled(bool enabled);
+    void setSaveSelectedFrameEnabled(bool enabled);
 
   signals:
     void connectRequested();
@@ -34,27 +31,26 @@ class MainWindow : public QMainWindow
 
     void showVideoRequested();
     void showSubtractionRequested();
-    void showCameraControlRequested();
-
-    void exposureChanged(quint32 exposure);
-    void gainChanged(float gain);
 
     void selectReferenceFrameRequested();
 
-  private slots:
-    void onConnectClicked();
-    void onDisconnectClicked();
+    void startRecordingRequested();
+    void stopRecordingRequested();
+    void saveSelectedFrameRequested();
 
   private:
     QAction* connectTcpAction = nullptr;
     QAction* disconnectTcpAction = nullptr;
+
     QAction* showVideoAction = nullptr;
     QAction* showSubtractionAction = nullptr;
-    QAction* cameraAction = nullptr;
+
     QAction* selectReferenceFrameAction = nullptr;
 
-    QProgressDialog* connectionDialog = nullptr;
+    QAction* startRecordingAction;
+    QAction* stopRecordingAction;
+    QAction* saveSelectedFrameAction;
+
     VideoWindow* videoWindow = nullptr;
     VideoWindow* subtractionWindow = nullptr;
-    ControlCameraWindow* controlCameraWindow = nullptr;
 };
