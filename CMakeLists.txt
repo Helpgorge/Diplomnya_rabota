@@ -104,10 +104,18 @@ if(WIN32)
     )
 
     add_custom_command(TARGET plasmonic POST_BUILD
+        # Копирование DLL зависимостей, известных CMake.
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:plasmonic>
+                "$<TARGET_FILE_DIR:plasmonic>"
+
+        # Копирование Qt DLL и плагинов, включая platforms.
         COMMAND "${QT_BIN_DIR}/windeployqt.exe"
                 $<IF:$<CONFIG:Debug>,--debug,--release>
                 "$<TARGET_FILE:plasmonic>"
-        COMMENT "Deploying Qt libraries"
+
+        COMMAND_EXPAND_LISTS
+        COMMENT "Deploying application dependencies"
         VERBATIM
     )
 endif()
