@@ -1,51 +1,84 @@
 #include "ImageProcessingModel.h"
+
 #include <QtConcurrent>
+#include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
-#include <QUuid>
 #include <QFile>
-#include <opencv2/imgcodecs.hpp>
+
+#include <cstdint>
 #include <vector>
 
-ImageProcessingModel::ImageProcessingModel(QObject* parent) : QObject(parent)
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+
+ImageProcessingModel::ImageProcessingModel(QObject *parent)
+    : QObject(parent)
 {
+    qRegisterMetaType<cv::Mat>("cv::Mat");
+
+    processingPool_.setMaxThreadCount(1);
+    originalRecordingPool_.setMaxThreadCount(1);
+    subtractionRecordingPool_.setMaxThreadCount(1);
+
+    snapshotDirectory_ =
+        QDir(QCoreApplication::applicationDirPath())
+            .filePath(QStringLiteral("snapshots"));
+
+    createFolders({snapshotDirectory_});
 }
 
-void ImageProcessingModel::processFrame(const QByteArray& frame)
+ImageProcessingModel::~ImageProcessingModel()
 {
-    constexpr int frameSize = 2592000;
-
-    if (frame.size() != frameSize) return;
-    if (recording_) recordFrame(frame);
-    if (processingFuture_.isRunning()) return;
-
-    processingFuture_ = QtConcurrent::run([this, frame]() { processFrameWorker(frame); });
+    stopRecording();
 }
 
-cv::Mat ImageProcessingModel::unpackRawFrame(const QByteArray& frame)
+void ImageProcessingModel::processFrame(const QByteArray &frame)
+{
+    if (frame.size() != 2592000 || processingFuture_.isRunning())
+        return;
+
+    const QString originalDirectory =
+        recording_ ? originalRecordingDirectory_ : QString();
+
+    const QString subtractionDirectory =
+        recording_ ? subtractionRecordingDirectory_ : QString();
+
+    processingFuture_ = QtConcurrent::run(
+        &processingPool_,
+        [this, frame, originalDirectory, subtractionDirectory]() {
+            processFrameWorker(
+                frame,
+                originalDirectory,
+                subtractionDirectory
+            );
+        }
+    );
+}
+
+cv::Mat ImageProcessingModel::unpackRawFrame(const QByteArray &frame)
 {
     constexpr int width = 1920;
     constexpr int height = 1080;
     constexpr int stride = width * 5 / 4;
 
-    if (frame.size() != stride * height) return {};
-
     cv::Mat raw(height, width, CV_16UC1);
 
-    const auto* source = reinterpret_cast<const uint8_t*>(frame.constData());
+    const std::uint8_t *source =
+        reinterpret_cast<const std::uint8_t *>(frame.constData());
 
-    for (int y = 0; y < height; ++y)
-    {
-        const uint8_t* row = source + y * stride;
-        uint16_t* pixels = raw.ptr<uint16_t>(y);
+    for (int y = 0; y < height; ++y) {
+        const std::uint8_t *row = source + y * stride;
+        std::uint16_t *pixels = raw.ptr<std::uint16_t>(y);
 
-        for (int x = 0; x < width; x += 4)
-        {
+        for (int x = 0; x < width; x += 4) {
             const int offset = x * 5 / 4;
-            const uint8_t low = row[offset + 4];
+            const std::uint8_t low = row[offset + 4];
 
-            for (int i = 0; i < 4; ++i)
-            {
-                pixels[x + i] = (static_cast<uint16_t>(row[offset + i]) << 2) | ((low >> (2 * i)) & 0x03);
+            for (int i = 0; i < 4; ++i) {
+                pixels[x + i] =
+                    (static_cast<std::uint16_t>(row[offset + i]) << 2)
+                    | ((low >> (2 * i)) & 0x03);
             }
         }
     }
@@ -53,31 +86,55 @@ cv::Mat ImageProcessingModel::unpackRawFrame(const QByteArray& frame)
     return raw;
 }
 
-void ImageProcessingModel::processFrameWorker(const QByteArray& frame)
+void ImageProcessingModel::processFrameWorker(
+    const QByteArray &frame,
+    const QString &originalDirectory,
+    const QString &subtractionDirectory)
 {
     const cv::Mat raw = unpackRawFrame(frame);
 
-    if (raw.empty()) return;
-
-    cv::Mat preview;
-    raw.convertTo(preview, CV_8UC1, 0.25);
-
-    emit frameReady(preview);
-
-    if (referenceRequested_)
-    {
+    if (referenceRequested_ || referenceFrame_.empty()) {
         referenceFrame_ = raw.clone();
         referenceRequested_ = false;
     }
 
-    if (referenceFrame_.empty()) referenceFrame_ = raw.clone();
-
     cv::Mat difference;
     cv::subtract(raw, referenceFrame_, difference);
 
+    if (!originalDirectory.isEmpty()
+        && !originalRecordingFuture_.isRunning()
+        && !subtractionRecordingFuture_.isRunning()) {
+        const QString fileName =
+            QStringLiteral("frame_%1.tiff")
+                .arg(++recordingFrameIndex_, 6, 10, QLatin1Char('0'));
+
+        const QString originalPath =
+            QDir(originalDirectory).filePath(fileName);
+
+        const QString subtractionPath =
+            QDir(subtractionDirectory).filePath(fileName);
+
+        originalRecordingFuture_ = QtConcurrent::run(
+            &originalRecordingPool_,
+            [this, raw, originalPath]() {
+                createTiffFile(raw, originalPath);
+            }
+        );
+
+        subtractionRecordingFuture_ = QtConcurrent::run(
+            &subtractionRecordingPool_,
+            [this, difference, subtractionPath]() {
+                createTiffFile(difference, subtractionPath);
+            }
+        );
+    }
+
+    cv::Mat preview;
+    raw.convertTo(preview, CV_8UC1, 0.25);
+    emit frameReady(preview);
+
     cv::Mat subtractionPreview;
     difference.convertTo(subtractionPreview, CV_8UC1, 0.25);
-
     emit subtractionReady(subtractionPreview);
 }
 
@@ -87,160 +144,96 @@ void ImageProcessingModel::selectReferenceFrame()
     referenceRequested_ = true;
 }
 
-bool ImageProcessingModel::startRecording()
+bool ImageProcessingModel::createFolders(const QStringList &directories)
 {
-    if (recording_) return false;
-
-    processingFuture_.waitForFinished();
-
-    const QString directoryPath = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("recordings"));
-
-    if (!QDir().mkpath(directoryPath))
-    {
-        emit recordingError(QStringLiteral("Не удалось создать папку: %1").arg(directoryPath));
-        return false;
+    for (const QString &directory : directories) {
+        if (!QDir().mkpath(directory))
+            return false;
     }
-
-    QDir directory(directoryPath);
-
-    const QString sessionName = QUuid::createUuid().toString(QUuid::WithoutBraces);
-
-    if (!directory.mkdir(sessionName))
-    {
-        emit recordingError(QStringLiteral("Не удалось создать папку записи"));
-        return false;
-    }
-
-    recordingDirectory_ = directory.filePath(sessionName);
-    recordingFrameIndex_ = 0;
-    recording_ = true;
 
     return true;
 }
 
-void ImageProcessingModel::recordFrame(const QByteArray& frame)
+bool ImageProcessingModel::startRecording()
 {
-    if (!recording_) return;
+    processingFuture_.waitForFinished();
 
-    const QString fileName = QStringLiteral("frame_%1.tiff").arg(recordingFrameIndex_ + 1, 6, 10, QLatin1Char('0'));
+    const QString directoryPath =
+        QDir(QCoreApplication::applicationDirPath()).filePath(
+            QStringLiteral("recordings/")
+            + QDateTime::currentDateTime().toString(
+                QStringLiteral("yyyy-MM-dd_HH-mm-ss-zzz")
+            )
+        );
 
-    const QString filePath = QDir(recordingDirectory_).filePath(fileName);
+    originalRecordingDirectory_ =
+        QDir(directoryPath).filePath(QStringLiteral("original"));
 
-    try
-    {
-        const cv::Mat raw = unpackRawFrame(frame);
+    subtractionRecordingDirectory_ =
+        QDir(directoryPath).filePath(QStringLiteral("subtraction"));
 
-        if (raw.empty()) return;
+    recordingFrameIndex_ = 0;
 
-        std::vector<uchar> encoded;
+    recording_ = createFolders({
+        originalRecordingDirectory_,
+        subtractionRecordingDirectory_
+    });
 
-        const std::vector<int> parameters = {cv::IMWRITE_TIFF_COMPRESSION, 1};
-
-        if (!cv::imencode(".tiff", raw, encoded, parameters))
-        {
-            recording_ = false;
-            emit recordingError(QStringLiteral("Не удалось сформировать TIFF"));
-            return;
-        }
-
-        QFile file(filePath);
-
-        if (!file.open(QIODevice::WriteOnly | QIODevice::NewOnly))
-        {
-            recording_ = false;
-            emit recordingError(file.errorString());
-            return;
-        }
-
-        const qint64 size = static_cast<qint64>(encoded.size());
-
-        const bool written = file.write(reinterpret_cast<const char*>(encoded.data()), size) == size;
-
-        if (!written || !file.flush())
-        {
-            const QString message = file.errorString();
-
-            file.close();
-            file.remove();
-
-            recording_ = false;
-            emit recordingError(message);
-            return;
-        }
-
-        ++recordingFrameIndex_;
-    }
-    catch (const cv::Exception& error)
-    {
-        recording_ = false;
-        emit recordingError(QString::fromUtf8(error.what()));
-    }
+    return recording_;
 }
 
 void ImageProcessingModel::stopRecording()
 {
-    processingFuture_.waitForFinished();
     recording_ = false;
+
+    processingFuture_.waitForFinished();
+    originalRecordingFuture_.waitForFinished();
+    subtractionRecordingFuture_.waitForFinished();
+}
+
+void ImageProcessingModel::createTiffFile(
+    const cv::Mat &frame,
+    const QString &filePath)
+{
+    QFile file(filePath);
+    std::vector<uchar> encoded;
+
+    if (!cv::imencode(
+            ".tiff",
+            frame,
+            encoded,
+            {cv::IMWRITE_TIFF_COMPRESSION, 1})
+        || !file.open(QIODevice::WriteOnly | QIODevice::NewOnly)) {
+        return;
+    }
+
+    const qint64 size = static_cast<qint64>(encoded.size());
+
+    if (file.write(
+            reinterpret_cast<const char *>(encoded.data()),
+            size) != size
+        || !file.flush()) {
+        file.close();
+        file.remove();
+    }
 }
 
 void ImageProcessingModel::saveSelectedFrame()
 {
     processingFuture_.waitForFinished();
 
-    if (referenceFrame_.empty())
-    {
-        emit frameSavingError(QStringLiteral("Кадр не выбран"));
+    if (referenceFrame_.empty() || referenceRequested_)
         return;
-    }
 
-    const QString directoryPath = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("snapshots"));
+    const QString fileName =
+        QStringLiteral("frame_%1.tiff").arg(
+            QDateTime::currentDateTime().toString(
+                QStringLiteral("yyyy-MM-dd_HH-mm-ss-zzz")
+            )
+        );
 
-    if (!QDir().mkpath(directoryPath))
-    {
-        emit frameSavingError(QStringLiteral("Не удалось создать папку: %1").arg(directoryPath));
-        return;
-    }
-
-    const QString fileName = QUuid::createUuid().toString(QUuid::WithoutBraces) + QStringLiteral(".tiff");
-
-    const QString filePath = QDir(directoryPath).filePath(fileName);
-
-    try
-    {
-        std::vector<uchar> encoded;
-
-        const std::vector<int> parameters = {cv::IMWRITE_TIFF_COMPRESSION, 1};
-
-        if (!cv::imencode(".tiff", referenceFrame_, encoded, parameters))
-        {
-            emit frameSavingError(QStringLiteral("Не удалось сформировать TIFF"));
-            return;
-        }
-
-        QFile file(filePath);
-
-        if (!file.open(QIODevice::WriteOnly | QIODevice::NewOnly))
-        {
-            emit frameSavingError(file.errorString());
-            return;
-        }
-
-        const qint64 size = static_cast<qint64>(encoded.size());
-
-        const bool written = file.write(reinterpret_cast<const char*>(encoded.data()), size) == size;
-
-        if (!written || !file.flush())
-        {
-            const QString message = file.errorString();
-
-            file.close();
-            file.remove();
-
-            emit frameSavingError(message);
-        }
-    }
-    catch (const cv::Exception& error)
-    {
-        emit frameSavingError(QString::fromUtf8(error.what()));
-    }
+    createTiffFile(
+        referenceFrame_,
+        QDir(snapshotDirectory_).filePath(fileName)
+    );
 }
