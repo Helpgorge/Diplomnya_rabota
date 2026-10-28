@@ -32,7 +32,9 @@ void MainPresenter::onDisconnectRequested()
     videoStreamModel->disconnectFromServer();
     view->setConnected(false, false);
     view->setStartRecordingEnabled(false);
+    view->setStopRecordingEnabled(false);
     view->setSaveSelectedFrameEnabled(false);
+    view->setSelectFrameEnabled(false);
 }
 
 // Взаимодействие с VideoStreamModel
@@ -42,7 +44,9 @@ void MainPresenter::onConnected()
     qInfo() << "TCP: Подключено";
     view->setConnected(true, false);
     view->setStartRecordingEnabled(true);
+    view->setStopRecordingEnabled(false);
     view->setSaveSelectedFrameEnabled(true);
+    view->setSelectFrameEnabled(true);
 }
 
 void MainPresenter::onStreamError(const QString& error)
@@ -51,5 +55,7 @@ void MainPresenter::onStreamError(const QString& error)
     view->showConnectionLost(error);
     view->setConnected(false, false);
     view->setStartRecordingEnabled(false);
+    view->setStopRecordingEnabled(false);
     view->setSaveSelectedFrameEnabled(false);
+    view->setSelectFrameEnabled(false);
 }

@@ -20,7 +20,9 @@ VideoPresenter::VideoPresenter(MainWindow* view, VideoStreamModel* stream, Image
 
     connect(processing_, &ImageProcessingModel::frameReady, this, &VideoPresenter::onFrameReady);
     connect(processing_, &ImageProcessingModel::subtractionReady, this, &VideoPresenter::onSubtractionReady);
+    connect(stream, &VideoStreamModel::connectionError, this, &VideoPresenter::onStreamError);
     connect(view, &MainWindow::selectReferenceFrameRequested, this, &VideoPresenter::onSelectReferenceFrameRequested);
+    connect(view, &MainWindow::disconnectRequested, this, &VideoPresenter::onDisconnected);
 }
 
 // Окна видео
@@ -74,4 +76,14 @@ void VideoPresenter::onStopRecordingRequested()
     processing_->stopRecording();
     view->setStopRecordingEnabled(false);
     view->setStartRecordingEnabled(true);
+}
+
+void VideoPresenter::onStreamError()
+{
+    processing_->stopRecording();
+}
+
+void VideoPresenter::onDisconnected()
+{
+    processing_->stopRecording();
 }

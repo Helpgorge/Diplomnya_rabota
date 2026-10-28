@@ -24,6 +24,7 @@ class MainWindow : public QMainWindow
     void setStartRecordingEnabled(bool enabled);
     void setStopRecordingEnabled(bool enabled);
     void setSaveSelectedFrameEnabled(bool enabled);
+    void setSelectFrameEnabled(bool enabled);
 
   signals:
     void connectRequested();

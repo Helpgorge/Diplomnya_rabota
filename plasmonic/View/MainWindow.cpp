@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connectTcpAction = networkMenu->addAction("Установить соединение");
     disconnectTcpAction = networkMenu->addAction("Разорвать соединение");
     selectReferenceFrameAction = processingMenu->addAction("Выбрать опорный кадр");
+    selectReferenceFrameAction->setEnabled(false);
 
     showVideoAction = windowsMenu->addAction("Исходный видеопоток");
     showSubtractionAction = windowsMenu->addAction("Вычитание опорного кадра");
@@ -105,6 +106,11 @@ void MainWindow::setStopRecordingEnabled(bool enabled)
 void MainWindow::setSaveSelectedFrameEnabled(bool enabled)
 {
     saveSelectedFrameAction->setEnabled(enabled);
+}
+
+void MainWindow::setSelectFrameEnabled(bool enabled)
+{
+    selectReferenceFrameAction->setEnabled(enabled);
 }
 
 // Окна с видео

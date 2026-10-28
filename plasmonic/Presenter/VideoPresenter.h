@@ -29,6 +29,9 @@ class VideoPresenter : public QObject
     void onStopRecordingRequested();
     void onSaveSelectedFrameRequested();
 
+    void onStreamError();
+    void onDisconnected();
+
     ImageProcessingModel* processing_ = nullptr;
     MainWindow* view = nullptr;
 };
