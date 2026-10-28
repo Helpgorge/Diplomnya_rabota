@@ -1,4 +1,3 @@
-
 cmake_minimum_required(VERSION 3.21)
 
 # ============================================================
@@ -16,7 +15,6 @@ set(CMAKE_AUTOMOC ON)
 # Dependencies
 # ============================================================
 
-# Qt 6
 find_package(Qt6 REQUIRED COMPONENTS
     Core
     Gui
@@ -25,25 +23,10 @@ find_package(Qt6 REQUIRED COMPONENTS
     Concurrent
 )
 
-# OpenCV
 find_package(OpenCV REQUIRED COMPONENTS
     core
     imgproc
     imgcodecs
-)
-
-# GStreamer
-set(GSTREAMER_ROOT "C:/libraries/gstreamer/msvc_x86_64")
-
-find_package(PkgConfig REQUIRED)
-
-set(ENV{PKG_CONFIG_PATH}
-    "${GSTREAMER_ROOT}/lib/pkgconfig"
-)
-
-pkg_check_modules(GSTREAMER REQUIRED IMPORTED_TARGET
-    gstreamer-1.0
-    gstreamer-app-1.0
 )
 
 # ============================================================
@@ -57,10 +40,9 @@ qt_add_executable(plasmonic
     plasmonic/Core/Logger.h
     plasmonic/Core/Logger.cpp
 
-
+    # Model
     plasmonic/Model/ImageProcessingModel.h
     plasmonic/Model/ImageProcessingModel.cpp
-
     plasmonic/Model/VideoStreamModel.h
     plasmonic/Model/VideoStreamModel.cpp
 
@@ -73,7 +55,6 @@ qt_add_executable(plasmonic
     # View
     plasmonic/View/MainWindow.h
     plasmonic/View/MainWindow.cpp
-
     plasmonic/View/VideoWindow.h
     plasmonic/View/VideoWindow.cpp
 )
@@ -103,19 +84,17 @@ target_link_libraries(plasmonic PRIVATE
     Qt6::Concurrent
 
     ${OpenCV_LIBS}
-
-    PkgConfig::GSTREAMER
 )
 
 # ============================================================
 # Windows configuration
 # ============================================================
 
-set_target_properties(plasmonic PROPERTIES
-    WIN32_EXECUTABLE TRUE
-)
-
 if(WIN32)
+    set_target_properties(plasmonic PROPERTIES
+        WIN32_EXECUTABLE TRUE
+    )
+
     get_target_property(QMAKE_EXECUTABLE
         Qt6::qmake IMPORTED_LOCATION
     )
